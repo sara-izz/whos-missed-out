@@ -8,13 +8,18 @@ require("data.table")
 require("dplyr")
 #library(sqldf)
 
+source("C:/Users/Sara_mahmoud/Documents/R analysis/whos_missed_out/column_selector.R")
 
 
 ######Function definition to create flatfile for each year of data 
 make.flatfile <- function(data_dir,year){
-
+  ###Get column names
+  col_vector <- column.selector(year)
+  childcols <- col_vector[[1]]
+  adultcols <- col_vector[[2]]
+  bencols <- col_vector[[3]]
+  hcols <- col_vector[[4]]
   ###Add columns from chdcare to chld
-
   chldcare <- read_spss(paste0(data_dir,year,"/spss19/chldcare.sav"))
   child <- read_spss(paste0(data_dir,year,"/spss19/child.sav"))
   
@@ -32,35 +37,29 @@ make.flatfile <- function(data_dir,year){
   head(CHILD)
   
   #Keep only needed variables
-  cols = c("SERNUM","BENUNIT","PERSON","COHABIT","SEX","AGE","CURQUAL","CDISDIFP","CDISD01","CDISD02","CDISD03",
-           "CDISD04","CDISD05","CDISD06","CDISD07","CDISD08","CDISD09","CDISD10","PARENT1","PARENT2","CHLOOK","IsChild")
-  CHILD[ , .SD, .SDcols = cols]
+  
+  CHILD[ , .SD, .SDcols = childcols]
   
   ###Add CHILD to adult dataset
   adult <- read_spss(paste0(data_dir,year,"/spss19/adult.sav"))
   ADULT = data.table(adult)
   setkeyv(ADULT, keycols)
-  ADULT <- merge(ADULT, CHILD[ , .SD, .SDcols = cols], by = keycols, all = TRUE, suffixes = c("a","c"))
+  ADULT <- merge(ADULT, CHILD[ , .SD, .SDcols = childcols], by = keycols, all = TRUE, suffixes = c("a","c"))
   
   #Turn IsChild NAs in to false
   ADULT %>% mutate_each(funs(replace(., is.na(.), F)), IsChild)
   
   #Add adult variables to list of columns to keep
   remove <- c("COHABIT","SEX","AGE","CURQUAL")
-  cols<-cols[! cols %in% remove]
-  cols <- c(cols, "COHABITa","SEXa","AGEa","CURQUALa","COHABITc","SEXc","AGEc","CURQUALc","HDAGE","DISBEN1","DISBEN2",
-            "DISBEN3","DISBEN4","DISBEN5","DISBEN6","DISDIFP1","DDATREP1","DISD01","DISD02","DISD03","DISD04","DISD05",
-            "DISD06","DISD07","DISD08","DISD09","DISD10","DVIL04A","SELFDEMP","NOWANT","RSTRCT","INJLONG","INCDUR",
-            "NUMJOB","EMPCONTR","TEMPJOB","HI1QUAL1","HI1QUAL2","HI1QUAL3","HI1QUAL4","HI1QUAL5","HI1QUAL6","HI3QUAL",
-            "FTED","ANYED","EDHR")
+  cols<-childcols[! childcols %in% remove]
+  cols <- c(cols, "COHABITa","SEXa","AGEa","CURQUALa","COHABITc","SEXc","AGEc","CURQUALc",adultcols) 
   
   ###Add benefit unit info to ADULT
   benu <- read_spss(paste0(data_dir,year,"/spss19/benunit.sav"))
   BENU = data.table(benu)
   setkeyv(BENU, c("SERNUM","BENUNIT"))
   #columns to pull from benefit unit
-  bencols = c("SERNUM","BENUNIT","BUKIDS","ADDMON","OAEXPNS","OAHOWPY1","OAHOWPY2","OAHOWPY3","OAHOWPY4","OAHOWPY5","OAHOWPY6","DEBTFRE1",
-              "DEBTFRE2","TOTSAVBU","TOTCAPB3")
+
   
   #merge those columns in to ADULT
   ADULT <- merge(ADULT, BENU[ , .SD, .SDcols = bencols], by = c("SERNUM","BENUNIT"), all.x = TRUE, suffixes = c("a","b"))
@@ -73,13 +72,7 @@ make.flatfile <- function(data_dir,year){
   HHOLD = data.table(hhold)
   
   #Columns to take from HHOLD
-  hcols = c("SERNUM","HRPNUM", "HHINC", "HBENINC", "HEARNS", "HHLDR01","HHLDR02","HHLDR03","HHLDR04","HHLDR05","HHLDR06","HHLDR07",
-            "HHLDR08","HHLDR09","HHLDR10","HHLDR11","HHLDR12","HHLDR13","HHLDR14","HHLDR97","HHSTAT", "DEPCHLDH",
-            "DISCHHA1","DISCHHC1","DISWHHA1","DISWHHC1","GBHSCOST", "GIVEHELP", "GVTREGN", "GVTREGNO", "PTENTYP2", "BEDROOM", "BURDEN")
-  
-  #check
-  HHOLD[ , .SD, .SDcols = hcols]
-  
+
   ADULT <- merge(ADULT, HHOLD[ , .SD, .SDcols = hcols], by = "SERNUM", all.x = TRUE, suffixes = c("a","h"))
   
   #add hhold columns to overall columns to keep
@@ -109,6 +102,4 @@ make.flatfile <- function(data_dir,year){
   return(AFF)
 }
 
-curr_dir <- "S:/@Communications, Policy and Campaigns/Research/STATS & INFO/Statistics/Household Surveys/Family Resources Survey/"
 
-affdt_1314 <- make.flatfile(curr_dir,"2013-14")
