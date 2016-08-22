@@ -1,27 +1,24 @@
-#If "haven" not found, do install.packages("haven")
-install.packages("sqldf")
-install.packages("data.table")
-install.packages("dplyr")
-
 require("haven")
 require("data.table")
 require("dplyr")
 #library(sqldf)
 
-source("C:/Users/Sara_mahmoud/Documents/R analysis/whos_missed_out/column_selector.R")
+source("column_selector.R")
 
 
 ######Function definition to create flatfile for each year of data 
 make.flatfile <- function(data_dir,year){
+  
   ###Get column names
   col_vector <- column.selector(year)
   childcols <- col_vector[[1]]
   adultcols <- col_vector[[2]]
   bencols <- col_vector[[3]]
   hcols <- col_vector[[4]]
+  hbaicols <- col_vector[[5]]
   ###Add columns from chdcare to chld
-  chldcare <- read_spss(paste0(data_dir,year,"/spss19/chldcare.sav"))
-  child <- read_spss(paste0(data_dir,year,"/spss19/child.sav"))
+  chldcare <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/chldcare.sav"))
+  child <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/child.sav"))
   
   #Convert dataframes to datatables
   CHLDCARE = data.table(chldcare)
@@ -41,13 +38,16 @@ make.flatfile <- function(data_dir,year){
   CHILD[ , .SD, .SDcols = childcols]
   
   ###Add CHILD to adult dataset
-  adult <- read_spss(paste0(data_dir,year,"/spss19/adult.sav"))
+  adult <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/adult.sav"))
   ADULT = data.table(adult)
   setkeyv(ADULT, keycols)
   ADULT <- merge(ADULT, CHILD[ , .SD, .SDcols = childcols], by = keycols, all = TRUE, suffixes = c("a","c"))
-  
+  # print("1")
+  # print(ADULT[SERNUM == '17470'])
   #Turn IsChild NAs in to false
   ADULT %>% mutate_each(funs(replace(., is.na(.), F)), IsChild)
+  ADULT %>% mutate_each(funs(replace(., is.na(.), 0)), COHABITa)
+  ADULT %>% mutate_each(funs(replace(., is.na(.), 0)), COHABITc)
   
   #Add adult variables to list of columns to keep
   remove <- c("COHABIT","SEX","AGE","CURQUAL")
@@ -55,31 +55,45 @@ make.flatfile <- function(data_dir,year){
   cols <- c(cols, "COHABITa","SEXa","AGEa","CURQUALa","COHABITc","SEXc","AGEc","CURQUALc",adultcols) 
   
   ###Add benefit unit info to ADULT
-  benu <- read_spss(paste0(data_dir,year,"/spss19/benunit.sav"))
+  benu <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/benunit.sav"))
   BENU = data.table(benu)
-  setkeyv(BENU, c("SERNUM","BENUNIT"))
+  keycols = c("SERNUM","BENUNIT")
+  setkeyv(BENU, keycols )
+  setkeyv(ADULT, keycols)
   #columns to pull from benefit unit
 
   
   #merge those columns in to ADULT
-  ADULT <- merge(ADULT, BENU[ , .SD, .SDcols = bencols], by = c("SERNUM","BENUNIT"), all.x = TRUE, suffixes = c("a","b"))
-  
+  ADULT <- merge(ADULT, BENU[ , .SD, .SDcols = bencols], by = keycols, all.x = TRUE, suffixes = c("a","b"))
+  # print("2")
+  # print(ADULT[SERNUM == '17470'])
   #add benunit columns to overall columns to keep
+  #take out SERNUM, BENUNIT to avoid overlap
+  remove <- c("SERNUM", "BENUNIT")
+  bencols<-bencols[! bencols %in% remove]
   cols <- c(cols, bencols)
   
   ###Add household info into ADULT
-  hhold <- read_spss(paste0(data_dir,year,"/spss19/househol.sav"))
+  hhold <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/househol.sav"))
   HHOLD = data.table(hhold)
-  
+  keycols = c("SERNUM")  
+  setkeyv(HHOLD, keycols)
+  setkeyv(ADULT, keycols)
   #Columns to take from HHOLD
 
-  ADULT <- merge(ADULT, HHOLD[ , .SD, .SDcols = hcols], by = "SERNUM", all.x = TRUE, suffixes = c("a","h"))
+  ADULT <- merge(ADULT, HHOLD[ , .SD, .SDcols = hcols], by = keycols, all.x = TRUE, suffixes = c("a","h"))
+  ADULT[, GROSS4a := NULL]
+  setnames(ADULT, "GROSS4h", "GROSS4")
   
   #add hhold columns to overall columns to keep
+  remove <- c("SERNUM")
+  hcols<-hcols[! hcols %in% remove]
   cols <- c(cols, hcols)
-  
+  #
+  # print("3")
+  # print(ADULT[SERNUM == '17470'])
   ###Add care info to ADULT
-  care <- read_spss(paste0(data_dir,year,"/spss19/care.sav"))
+  care <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/care.sav"))
   CARE = data.table(care)
   
   cacols <- c("WHOLOO01", "WHOLOO02", "WHOLOO03", "WHOLOO04", "WHOLOO05", "WHOLOO06", "WHOLOO07", "WHOLOO08", "WHOLOO09","WHOLOO10","WHOLOO11",
@@ -97,8 +111,24 @@ make.flatfile <- function(data_dir,year){
   #add care columns to overall columns to keep
   cols <- c(cols, cacols)
   ### New data table that is slimmed down ADULT to variables needed
-  
+  # print("4")
+  # print(ADULT[SERNUM == '17470'])
   AFF <- ADULT[, .SD, .SDcols = cols]
+  # print("5")
+  # print(AFF[SERNUM == '17470'])
+  #####Add in HBAI variables
+  hbai <- read_spss(paste0(data_dir,"HBAI/1995-2015/spss19/hbai", year,"_g4.sav")) #year,
+  HBAI = data.table(hbai)
+  keycols = c("SERNUM", "BENUNIT")
+  setkeyv(HBAI, keycols)
+  # #columns to pull from benefit unit
+  # 
+  # 
+  # #merge those columns in to ADULT
+  AFF <- merge(AFF, HBAI[ , .SD, .SDcols = hbaicols], by = keycols, all.x = TRUE, suffixes = c("a","hbai"))
+  # affdt_1415 <- merge(affdt_1415, HBAI[ , .SD, .SDcols = hbaicols], by = "SERNUM", all.x = TRUE, suffixes = c("a","hbai"))
+  # print("6")
+  # print(AFF[SERNUM == '17470'])
   return(AFF)
 }
 
