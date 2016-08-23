@@ -45,14 +45,26 @@ make.flatfile <- function(data_dir,year){
   # print("1")
   # print(ADULT[SERNUM == '17470'])
   #Turn IsChild NAs in to false
-  ADULT %>% mutate_each(funs(replace(., is.na(.), F)), IsChild)
-  ADULT %>% mutate_each(funs(replace(., is.na(.), 0)), COHABITa)
-  ADULT %>% mutate_each(funs(replace(., is.na(.), 0)), COHABITc)
+  # ADULT %>% mutate_each(funs(replace(., is.na(.), F)), IsChild)
+  # ADULT %>% mutate_each(funs(replace(., is.na(.), 0)), COHABITa)
+  # ADULT %>% mutate_each(funs(replace(., is.na(.), 0)), COHABITc)
+  
+  ADULT[is.na(IsChild), IsChild := FALSE]
   
   #Add adult variables to list of columns to keep
   remove <- c("COHABIT","SEX","AGE","CURQUAL")
   cols<-childcols[! childcols %in% remove]
   cols <- c(cols, "COHABITa","SEXa","AGEa","CURQUALa","COHABITc","SEXc","AGEc","CURQUALc",adultcols) 
+  
+  ADULT[is.na(COHABITa), COHABITa := 999]
+  ADULT[is.na(COHABITc), COHABITc := 999]
+  ADULT[is.na(SEXa), SEXa := 999]
+  ADULT[is.na(SEXc), SEXc := 999]
+  ADULT[is.na(AGEc), AGEc := 999]
+  ADULT[is.na(CURQUALa), CURQUALa := 999]
+  ADULT[is.na(CURQUALc), CURQUALc := 999]
+  
+  #recode potentially missing variables
   
   ###Add benefit unit info to ADULT
   benu <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/benunit.sav"))

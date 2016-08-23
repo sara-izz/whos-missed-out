@@ -27,9 +27,9 @@ affdt_1415[ , year := 1415]
 l <- list(affdt_1314, affdt_1415)
 affdt_1315 <- rbindlist(l, fill = TRUE)
 
-write_sav(affdt_1415, paste0(results_dir, "flatfile_1415.sav"))
-write_sav(affdt_1314, paste0(results_dir, "flatfile_1314.sav"))
-write_sav(affdt_1315, paste0(results_dir, "flatfile_1315.sav"))
+# write_sav(affdt_1415, paste0(results_dir, "flatfile_1415.sav"))
+# write_sav(affdt_1314, paste0(results_dir, "flatfile_1314.sav"))
+# write_sav(affdt_1315, paste0(results_dir, "flatfile_1315.sav"))
 
 #Get rid of non-England rows
 #setkey(affdt_1415, GVTREGN)
@@ -71,7 +71,8 @@ affdt_1315[ year == '1415',hh_gross_inc := ESGINCHH * BHCDEF * 52]
 #inflate 1314 to 1415 prices
 affdt_1315[ year == '1314',hh_gross_inc := ESGINCHH * BHCDEF * 52 * (100/99)]
 
-#Calculate number of bedrooms needed according to overcrowding definition
+#Calculate number of bedrooms needed according to LHA definition
+#see http://england.shelter.org.uk/get_advice/housing_benefit_and_local_housing_allowance/what_is_housing_benefit/local_housing_allowance
 #number of cohabiting couples in household requiring rooms
 affdt_1315[ , num_cohabita := 0L]
 affdt_1315[ , num_cohabitc := 0L]
@@ -79,16 +80,85 @@ affdt_1315[ , num_cohabita := sum(COHABITa == '1'), by=.(SERNUM, year)]
 affdt_1315[ , num_cohabitc := sum(COHABITc == '1'), by=.(SERNUM, year)]
 affdt_1315[ , cohab_rooms :=  (num_cohabita + num_cohabitc)/2]  #doesn't work at the moment because num_cohabitc empty
 
-#Number of single over (here 24, should be 21 but only have banded ages)
-affdt_1315[ , single21_rooms := sum((HDAGE > '1' & COHABITa =='2')), by=.(SERNUM, year)]
+
+#Number of single over 16
+affdt_1315[ , single16_rooms := sum(( (IsChild == 'FALSE' | AGEc >=16) & COHABITa =='2')), by=.(SERNUM, year)]
 
 #Number of pairs of kids under 10 
 #Recode AGEc for adults from NA to 999
 affdt_1315[ is.na(AGEc), AGEc := 999]
-affdt_1315[ , num_kids10 := sum(AGEc <= 10), by=.(SERNUM, year)]
+affdt_1315[ , num_kids10 := sum(AGEc < 10), by=.(SERNUM, year)]
 affdt_1315[ , kids10_rooms := floor(num_kids10/2), by=.(SERNUM, year)]
 
-#
+#Flag if left over kid
+affdt_1315[ , spare_kid10 := FALSE]
+affdt_1315[ , spare_kid10 := ifelse (num_kids10 %% 2 != 0, TRUE, FALSE)]
+
+#Number of pairs of girls 10-16
+affdt_1315[ , num_girls1016 := sum( (AGEc >= 10 & AGEc < 16) & SEXc == '2'), by=.(SERNUM, year)]
+affdt_1315[ , girls1016_rooms := floor(num_girls1016/2), by=.(SERNUM, year)]
+
+#Flag if left over girl 10-16
+affdt_1315[ , spare_girl1016 := FALSE]
+affdt_1315[ , spare_girl1016 := ifelse (num_girls1016 %% 2 != 0, TRUE, FALSE)]
+
+#Number of pairs of boys 10-16
+affdt_1315[ , num_boys1016 := sum( (AGEc >= 10 & AGEc < 16) & SEXc == '1'), by=.(SERNUM, year)]
+affdt_1315[ , boys1016_rooms := floor(num_boys1016/2), by=.(SERNUM, year)]
+
+#Flag if left over boy 10-16
+affdt_1315[ , spare_boy1016 := FALSE]
+affdt_1315[ , spare_boy1016 := ifelse (num_boys1016 %% 2 != 0, TRUE, FALSE)]
+
+#### Extra rooms for leftover kids
+affdt_1315[ , num_extrarooms := 0]
+
+# Sexes of kids under 10
+affdt_1315[ ,isgirl_under10 := ifelse((SEXc == '2' & AGEc < 10), 1, 0)]
+affdt_1315[ ,isboy_under10 := ifelse((SEXc == '1' & AGEc < 10), 1, 0)]
+affdt_1315[ , num_girlunder10 := sum(isgirl_under10), by =.(SERNUM, year)]
+affdt_1315[ , num_boyunder10 := sum(isboy_under10), by =.(SERNUM, year)]
+
+## First try and assign spare 10-16 to spare kids under 10, add on room for them if can't
+#Cases where there is a spare kid under 10, spare girl 10-16 and one of kids under 10 isn't a girl -> 1 extra room for spare girl 10-16
+affdt_1315[ (spare_kid10 == 'TRUE' & spare_girl1016 == 'TRUE'), 
+            num_extrarooms := ifelse( num_girlunder10 == 0, num_extrarooms + 1, num_extrarooms), 
+            by=.(SERNUM, year)]
+#Cases where there is a spare kid under 10, spare boy 10-16 and one of kids under 10 isn't a boy -> 1 extra room for spare girl 10-16
+affdt_1315[ (spare_kid10 == 'TRUE' & spare_boy1016 == 'TRUE'), 
+            num_extrarooms := ifelse(num_boyunder10 == 0, num_extrarooms + 1, num_extrarooms), 
+            by=.(SERNUM, year)]
+
+
+## Now add extra rooms for cases where can match spare 10-16 to spare kids under 10
+affdt_1315[ (spare_kid10 == 'TRUE' & spare_girl1016 == 'TRUE'), 
+            num_extrarooms := ifelse( num_girlunder10 > 0, num_extrarooms + 1, num_extrarooms), 
+            by=.(SERNUM, year)]
+
+
+affdt_1315[ (spare_kid10 == 'TRUE' & spare_boy1016 == 'TRUE'), 
+            num_extrarooms := ifelse( num_boyunder10 > 0, num_extrarooms + 1, num_extrarooms), 
+            by=.(SERNUM, year)]
+
+
+## Now add extra rooms for cases where can't match spare kid under 10 to spare girl or boy 10-16
+affdt_1315[ (spare_kid10 == 'TRUE' & (num_girlunder10 == 0)), 
+            num_extrarooms := ifelse((spare_boy1016 == FALSE & spare_girl1016 == TRUE), num_extrarooms + 1, num_extrarooms),
+            by=.(SERNUM, year)]
+
+
+affdt_1315[ (spare_kid10 == 'TRUE' & (num_boyunder10 == 0)), 
+            num_extrarooms := ifelse((spare_girl1016 == FALSE & spare_boy1016 == TRUE), num_extrarooms + 1, num_extrarooms),
+            by=.(SERNUM, year)]
+
+
+affdt_1315[ ( spare_kid10 == 'TRUE' & spare_girl1016 == 0 & spare_boy1016 == 0 ), 
+            num_extrarooms := num_extrarooms + 1,
+            by=.(SERNUM, year)]
+
+
+### Add all rooms together
+affdt_1315[ , bedrooms_needed := cohab_rooms + single16_rooms + kids10_rooms + girls1016_rooms + boys1016_rooms + num_extrarooms]
 
 # #Attach starter homes threshold (median NB)
 # affdt_1415[, startm_thresh := owner_thresh [affdt_1415[,GVTREGN], starter_median]]
