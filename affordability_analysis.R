@@ -243,14 +243,60 @@ affdt_1315_1BU <- affdt_1315[ multiple_benu == 0, ]
 #Add 2 year hhd weight
 affdt_1315_1BU[ , hhweight_2 := GS_NEWHH/2]
 
+affdt_1315_1BU[ , GVTREGN := factor(GVTREGN, labels = c("North East", "North West", "Yorkshire and Humber", "East Midlands",
+                                                        "West Midlands", "East", "London", "South East", "South West"))]
 #Private renters who can't afford median market rent
 
+#aff.labels <- sji.getValueLabels(affdt_1315_1BU)
+
+#Flag for is HRP - can also be used to collapse dataset down to household level for household level variables
+affdt_1315_1BU[ , is_HRP := ifelse( PERSON == HRPNUM, 1, 0) ]
+
 #with HB
-affdt_1315_1BU[ ( PTENTYP2 == 3 | PTENTYP2 == 4 ), sjt.frq(aff_rentmed_g, weight.by = hhweight_2)]
-affdt_1315_1BU[ ( PTENTYP2 == 3 | PTENTYP2 == 4 ), sjt.frq(aff_rentlq_g, weight.by = hhweight_2)]
+affdt_1315_1BU[ ( (PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP ), sjt.frq(aff_rentmed_g, weight.by = hhweight_2)]
+affdt_1315_1BU[ ( (PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP ), sjt.frq(aff_rentlq_g, weight.by = hhweight_2)]
 
 #without HB
-affdt_1315_1BU[ ( PTENTYP2 == 3 | PTENTYP2 == 4 ), sjt.frq(aff_rentmed_gnohb, weight.by = hhweight_2)]
-affdt_1315_1BU[ ( PTENTYP2 == 3 | PTENTYP2 == 4 ), sjt.frq(aff_rentlq_gnohb, weight.by = hhweight_2)]
+affdt_1315_1BU[ ( (PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP ), sjt.frq(aff_rentmed_gnohb, weight.by = hhweight_2)]
+affdt_1315_1BU[ ( (PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP ), sjt.frq(aff_rentlq_gnohb, weight.by = hhweight_2)]
+
+#Cross tabs
+affdt_1315_1BU[ ( (PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP ), sjt.xtab(aff_rentmed_g, GVTREGN, var.labels=c("Can afford med rent", "Region"),
+                                                                       weight.by = hhweight_2, show.col.prc = TRUE)
+                ]
+
+affdt_1315_1BU[ ( (PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP), sjt.xtab(aff_rentlq_g, GVTREGN,
+                                                                      var.labels=c("Can afford LQ rent", "Region"), 
+                                                                      weight.by = hhweight_2, show.col.prc = TRUE)
+                ]
+
+#Social renters
+#Cross tabs
+affdt_1315_1BU[ ( (PTENTYP2 == 1 | PTENTYP2 == 2) & is_HRP ), sjt.xtab(aff_rentmed_g, GVTREGN, var.labels=c("Can afford med rent", "Region"),
+                                                                       weight.by = hhweight_2, show.col.prc = TRUE)
+                ]
+
+affdt_1315_1BU[ ( (PTENTYP2 == 1 | PTENTYP2 == 2) & is_HRP ), sjt.xtab(aff_rentlq_g, GVTREGN, var.labels=c("Can afford LQ rent", "Region"), 
+                                                                       weight.by = hhweight_2, show.col.prc = TRUE)
+                ]
+
+#All renters
+affdt_1315_1BU[ ( (PTENTYP2 == 1 | PTENTYP2 == 2 | PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP), sjt.xtab(aff_rentmed_g, GVTREGN, var.labels=c("Can afford med rent", "Region"),
+                                                                                                      weight.by = hhweight_2, show.col.prc = TRUE)
+                ]
+
+affdt_1315_1BU[ ( (PTENTYP2 == 1 | PTENTYP2 == 2 | PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP ), sjt.xtab(aff_rentlq_g, GVTREGN, var.labels=c("Can afford LQ rent", "Region"), 
+                                                                                                       weight.by = hhweight_2, show.col.prc = TRUE)
+                ]
+
+
+#Household characteristics
+affdt_1315_1BU[ ( (PTENTYP2 == 1 | PTENTYP2 == 2 | PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP & GVTREGN == "London"), sjt.xtab(aff_rentmed_g, SELFDEMP, var.labels=c("Can afford med rent", "Region"),
+                                                                                                                            weight.by = hhweight_2, show.row.prc = TRUE)
+                ]
+
+affdt_1315_1BU[ ( (PTENTYP2 == 1 | PTENTYP2 == 2 | PTENTYP2 == 3 | PTENTYP2 == 4) & is_HRP & GVTREGN != "London"), sjt.xtab(aff_rentmed_g, SELFDEMP, var.labels=c("Can afford med rent", "Region"),
+                                                                                                                            weight.by = hhweight_2, show.row.prc = TRUE)
+                ]
 
 
