@@ -17,7 +17,8 @@ make.flatfile <- function(data_dir,year){
   hcols <- col_vector[[4]]
   hbaicols <- col_vector[[5]]
   ###Add columns from chdcare to chld
-  chldcare <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/chldcare.sav"))
+  if(year != "1213"){chldcare <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/chldcare.sav"))}
+  if(year == "1213"){chldcare <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/childcare.sav"))}
   child <- read_spss(paste0(data_dir,"Family Resources Survey/",year,"/spss19/child.sav"))
   
   #Convert dataframes to datatables
