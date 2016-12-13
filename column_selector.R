@@ -15,7 +15,7 @@ column.selector <- function(year){
     #Doesn't include replicated variables in childcols as given suffix in makefile code
     
     benu_col <- c("SERNUM","BENUNIT","BUKIDS","ADDMON","OAEXPNS","OAHOWPY1","OAHOWPY2","OAHOWPY3","OAHOWPY4","OAHOWPY5","OAHOWPY6","DEBTFRE1",
-                  "DEBTFRE2","TOTSAVBU","TOTCAPB3")
+                  "DEBTFRE2","DEBTFRE3","TOTSAVBU","TOTCAPB3")
     hhold_col <- c("SERNUM","HRPNUM", "HHINC", "HBENINC", "HEARNS", "HHIRBEN", "NHBENINC","HHLDR01","HHLDR02","HHLDR03","HHLDR04","HHLDR05","HHLDR06","HHLDR07",
                    "HHLDR08","HHLDR09","HHLDR10","HHLDR11","HHLDR12","HHLDR13","HHLDR14","HHLDR97","HHSTAT", "DEPCHLDH",
                    "DISCHHA1","DISCHHC1","DISWHHA1","DISWHHC1","GBHSCOST", "GIVEHELP", "GVTREGN", "GVTREGNO", "PTENTYP2", "BEDROOM6", "BURDEN", "GROSS4","HHRENT")
@@ -24,7 +24,7 @@ column.selector <- function(year){
                   "ESGINCHH","ESGINVBU","ESGINVHH","ESGJOBBU","ESGJOBHH","ESGJOBSP","ESGOCCBU","ESGOCCHH","ESGRSEBU","ESGRSEHH","ESGRSESP",
                   "ESMISCBU","ESMISCHH","ESNINCBU","ESNINCHH","ESPRIBBU","ESPRIBHH","G_NEWAD","G_NEWBU","G_NEWCH","G_NEWHH","G_NEWPN",
                   "G_NEWPP","G_NEWWA","GINSEBU","GNEWHHP","GS_NEWAD","GS_NEWBU","GS_NEWCH","GS_NEWHH","GS_NEWPN","GS_NEWPP","GS_NEWPPH",
-                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH")
+                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH", "ECOBU")
     
   }
   else if (year=="1314"){
@@ -37,7 +37,7 @@ column.selector <- function(year){
     #Doesn't include replicated variables in childcols as given suffix in makefile code
 
     benu_col <- c("SERNUM","BENUNIT","BUKIDS","ADDMON","OAEXPNS","OAHOWPY1","OAHOWPY2","OAHOWPY3","OAHOWPY4","OAHOWPY5","OAHOWPY6","DEBTFRE1",
-                  "DEBTFRE2","TOTSAVBU","TOTCAPB3")
+                  "DEBTFRE2","DEBTFRE3","TOTSAVBU","TOTCAPB3")
     hhold_col <- c("SERNUM","HRPNUM", "HHINC", "HBENINC", "HEARNS","HHIRBEN","NHBENINC", "HHLDR01","HHLDR02","HHLDR03","HHLDR04","HHLDR05","HHLDR06","HHLDR07",
                    "HHLDR08","HHLDR09","HHLDR10","HHLDR11","HHLDR12","HHLDR13","HHLDR14","HHLDR97","HHSTAT", "DEPCHLDH",
                    "DISCHHA1","DISCHHC1","DISWHHA1","DISWHHC1","GBHSCOST", "GIVEHELP", "GVTREGN", "GVTREGNO", "PTENTYP2", "BEDROOM6", "BURDEN", "GROSS4", "HHRENT")
@@ -46,7 +46,7 @@ column.selector <- function(year){
                   "ESGINCHH","ESGINVBU","ESGINVHH","ESGJOBBU","ESGJOBHH","ESGJOBSP","ESGOCCBU","ESGOCCHH","ESGRSEBU","ESGRSEHH","ESGRSESP",
                   "ESMISCBU","ESMISCHH","ESNINCBU","ESNINCHH","ESPRIBBU","ESPRIBHH","G_NEWAD","G_NEWBU","G_NEWCH","G_NEWHH","G_NEWPN",
                   "G_NEWPP","G_NEWWA","GINSEBU","GNEWHHP","GS_NEWAD","GS_NEWBU","GS_NEWCH","GS_NEWHH","GS_NEWPN","GS_NEWPP","GS_NEWPPH",
-                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH")
+                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH", "ECOBU")
 
   }
   
@@ -60,7 +60,7 @@ column.selector <- function(year){
     #Doesn't include replicated variables in childcols as given suffix in makefile code
     
     benu_col <- c("SERNUM","BENUNIT","BUKIDS","ADDMON","OAEXPNS","OAHOWPY1","OAHOWPY2","OAHOWPY3","OAHOWPY4","OAHOWPY5","OAHOWPY6","DEBTFRE1",
-                  "DEBTFRE2","TOTSAVBU","TOTCAPB3")
+                  "DEBTFRE2","DEBTFRE3","TOTSAVBU","TOTCAPB3")
     hhold_col <- c("SERNUM","HRPNUM", "HHINC", "HBENINC", "HEARNS","HHIRBEN","HHLDR01","HHLDR02","HHLDR03","HHLDR04","HHLDR05","HHLDR06","HHLDR07",
                    "HHLDR08","HHLDR09","HHLDR10","HHLDR11","HHLDR12","HHLDR13","HHLDR14","HHLDR97","HHSTAT", "DEPCHLDH",
                    "DISCHHA1","DISCHHC1","DISWHHA1","DISWHHC1","GBHSCOST", "GIVEHELP", "GVTREGN", "GVTREGNO", "PTENTYP2", "BEDROOM6", "BURDEN", "GROSS4", "HHRENT")
@@ -69,10 +69,82 @@ column.selector <- function(year){
                   "ESGINCHH","ESGINVBU","ESGINVHH","ESGJOBBU","ESGJOBHH","ESGJOBSP","ESGOCCBU","ESGOCCHH","ESGRSEBU","ESGRSEHH","ESGRSESP",
                   "ESMISCBU","ESMISCHH","ESNINCBU","ESNINCHH","ESPRIBBU","ESPRIBHH","G_NEWAD","G_NEWBU","G_NEWCH","G_NEWHH","G_NEWPN",
                   "G_NEWPP","G_NEWWA","GINSEBU","GNEWHHP","GS_NEWAD","GS_NEWBU","GS_NEWCH","GS_NEWHH","GS_NEWPN","GS_NEWPP","GS_NEWPPH",
-                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH")
+                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH", "ECOBU")
     
   }
-  
+  else if (year=="1112"){
+    #No CURQUAL and disability variables different name
+    child_col <- c("SERNUM","BENUNIT","PERSON","COHABIT","SEX","AGE", "CDISDIFP","CDISDIF1","CDISDIF2","CDISDIF3",
+                   "CDISDIF4","CDISDIF5","CDISDIF6","CDISDIF7","CDISDIF8","CDISDIF9", "PARENT1","PARENT2","CHLOOK","IsChild")
+    #Disability different names, no SELFDEMP, no EMPCONTR, no TEMPJOB, HI2QUAL instead of HI3QUAL
+    adult_col <- c("HDAGE","DISDIFP","DDATREP","DISDIF1","DISDIF2","DISDIF3","DISDIF4",
+                   "DISDIF5","DISDIF6","DISDIF7","DISDIF8","DISDIF9","DVIL04A","NOWANT","RSTRCT","INJLONG","INCDUR", "NUMJOB",
+                   "HI1QUAL1","HI1QUAL2","HI1QUAL3","HI1QUAL4","HI1QUAL5","HI1QUAL6","HI2QUAL","FTED","ANYED","EDHR", "R01", 
+                   "R02","R03", "R04", "R05", "R06", "R07", "R08", "R09", "R10", "R11", "R12", "R13", "R14") 
+    #Doesn't include replicated variables in childcols as given suffix in makefile code
+    #DEBTFRE -> DEBT1, DEBT2 etc., no behind on rent
+    benu_col <- c("SERNUM","BENUNIT","BUKIDS","ADDMON","OAEXPNS","OAHOWPY1","OAHOWPY2","OAHOWPY3","OAHOWPY4","OAHOWPY5","OAHOWPY6","DEBT1",
+                  "DEBT2", "DEBT3", "DEBT4", "DEBT5", "DEBT6", "DEBT7", "DEBT8", "DEBT9", "TOTSAVBU","TOTCAPB3")
+    #No DISCHHA1, DISCHC1, DISWHHA1 or DISWHHC1. No GVTREGNO as old coding. No BURDEN. GROSS4 -> gross4.
+    hhold_col <- c("SERNUM","HRPNUM", "HHINC", "HBENINC", "HEARNS","HHIRBEN","HHLDR01","HHLDR02","HHLDR03","HHLDR04","HHLDR05","HHLDR06","HHLDR07",
+                   "HHLDR08","HHLDR09","HHLDR10","HHLDR11","HHLDR12","HHLDR13","HHLDR14","HHLDR97","HHSTAT", "DEPCHLDH",
+                   "GBHSCOST", "GIVEHELP", "GVTREGN", "PTENTYP2", "BEDROOM6", "gross4", "HHRENT")
+    hbai_col <- c("SERNUM", "BENUNIT","AHCDEF","BHCDEF","EBENINBU","EBENINHH","EGRERNBU","EGRERNHH","EGRINCBU","EGRINCHH","EHBENBU","EMISCIBU","EMISCIHH",
+                  "ENTERNBU","ENTERNHH","ENTINCBU","ENTINCHH","EQOAHCHH","EQOBHCHH","ES_HCOST","ESAHCHH","ESBENIBU","ESBENIHH","ESGINCBU",
+                  "ESGINCHH","ESGINVBU","ESGINVHH","ESGJOBBU","ESGJOBHH","ESGJOBSP","ESGOCCBU","ESGOCCHH","ESGRSEBU","ESGRSEHH","ESGRSESP",
+                  "ESMISCBU","ESMISCHH","ESNINCBU","ESNINCHH","ESPRIBBU","ESPRIBHH","G_NEWAD","G_NEWBU","G_NEWCH","G_NEWHH","G_NEWPN",
+                  "G_NEWPP","G_NEWWA","GINSEBU","GNEWHHP","GS_NEWAD","GS_NEWBU","GS_NEWCH","GS_NEWHH","GS_NEWPN","GS_NEWPP","GS_NEWPPH",
+                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH", "ECOBU")
+
+  }
+  else if (year=="1011"){
+    #No CURQUAL and disability variables different name
+    child_col <- c("SERNUM","BENUNIT","PERSON","COHABIT","SEX","AGE", "CDISDIFP","CDISDIF1","CDISDIF2","CDISDIF3",
+                   "CDISDIF4","CDISDIF5","CDISDIF6","CDISDIF7","CDISDIF8","CDISDIF9", "PARENT1","PARENT2","CHLOOK","IsChild")
+    #Disability different names, no SELFDEMP, no EMPCONTR, no TEMPJOB, HI2QUAL instead of HI3QUAL
+    adult_col <- c("HDAGE","DISDIFP","DDATREP","DISDIF1","DISDIF2","DISDIF3","DISDIF4",
+                   "DISDIF5","DISDIF6","DISDIF7","DISDIF8","DISDIF9","DVIL04A","NOWANT","RSTRCT","INJLONG","INCDUR", "NUMJOB",
+                   "HI1QUAL1","HI1QUAL2","HI1QUAL3","HI1QUAL4","HI1QUAL5","HI1QUAL6","HI2QUAL","FTED","ANYED","EDHR", "R01", 
+                   "R02","R03", "R04", "R05", "R06", "R07", "R08", "R09", "R10", "R11", "R12", "R13", "R14") 
+    #Doesn't include replicated variables in childcols as given suffix in makefile code
+    #DEBTFRE -> DEBT1, DEBT2 etc., no behind on rent
+    benu_col <- c("SERNUM","BENUNIT","BUKIDS","ADDMON","OAEXPNS","OAHOWPY1","OAHOWPY2","OAHOWPY3","OAHOWPY4","OAHOWPY5","OAHOWPY6","DEBT1",
+                  "DEBT2", "DEBT3", "DEBT4", "DEBT5", "DEBT6", "DEBT7", "DEBT8", "DEBT9", "TOTSAVBU","TOTCAPB3")
+    #No DISCHHA1, DISCHC1, DISWHHA1 or DISWHHC1. No GVTREGNO as old coding. No BURDEN. GROSS4 -> gross4.
+    hhold_col <- c("SERNUM","HRPNUM", "HHINC", "HBENINC", "HEARNS","HHIRBEN","HHLDR01","HHLDR02","HHLDR03","HHLDR04","HHLDR05","HHLDR06","HHLDR07",
+                   "HHLDR08","HHLDR09","HHLDR10","HHLDR11","HHLDR12","HHLDR13","HHLDR14","HHLDR97","HHSTAT", "DEPCHLDH",
+                   "GBHSCOST", "GIVEHELP", "GVTREGN", "PTENTYP2", "BEDROOM6", "gross4", "HHRENT")
+    hbai_col <- c("SERNUM", "BENUNIT","AHCDEF","BHCDEF","EBENINBU","EBENINHH","EGRERNBU","EGRERNHH","EGRINCBU","EGRINCHH","EHBENBU","EMISCIBU","EMISCIHH",
+                  "ENTERNBU","ENTERNHH","ENTINCBU","ENTINCHH","EQOAHCHH","EQOBHCHH","ES_HCOST","ESAHCHH","ESBENIBU","ESBENIHH","ESGINCBU",
+                  "ESGINCHH","ESGINVBU","ESGINVHH","ESGJOBBU","ESGJOBHH","ESGJOBSP","ESGOCCBU","ESGOCCHH","ESGRSEBU","ESGRSEHH","ESGRSESP",
+                  "ESMISCBU","ESMISCHH","ESNINCBU","ESNINCHH","ESPRIBBU","ESPRIBHH","G_NEWAD","G_NEWBU","G_NEWCH","G_NEWHH","G_NEWPN",
+                  "G_NEWPP","G_NEWWA","GINSEBU","GNEWHHP","GS_NEWAD","GS_NEWBU","GS_NEWCH","GS_NEWHH","GS_NEWPN","GS_NEWPP","GS_NEWPPH",
+                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH", "ECOBU")
+  }
+  else if (year=="0910"){
+    #No CURQUAL and disability variables different name
+    child_col <- c("SERNUM","BENUNIT","PERSON","COHABIT","SEX","AGE", "CDISDIFP","CDISDIF1","CDISDIF2","CDISDIF3",
+                   "CDISDIF4","CDISDIF5","CDISDIF6","CDISDIF7","CDISDIF8","CDISDIF9", "PARENT1","PARENT2","CHLOOK","IsChild")
+    #Disability different names, no SELFDEMP, no EMPCONTR, no TEMPJOB, HI2QUAL instead of HI3QUAL
+    adult_col <- c("HDAGE","DISDIFP","DDATREP","DISDIF1","DISDIF2","DISDIF3","DISDIF4",
+                   "DISDIF5","DISDIF6","DISDIF7","DISDIF8","DISDIF9","DVIL04A","NOWANT","RSTRCT","INJLONG","INCDUR", "NUMJOB",
+                   "HI1QUAL1","HI1QUAL2","HI1QUAL3","HI1QUAL4","HI1QUAL5","HI1QUAL6","HI2QUAL","FTED","ANYED","EDHR", "R01", 
+                   "R02","R03", "R04", "R05", "R06", "R07", "R08", "R09", "R10", "R11", "R12", "R13", "R14") 
+    #Doesn't include replicated variables in childcols as given suffix in makefile code
+    #DEBTFRE -> DEBT1, DEBT2 etc., no behind on rent
+    benu_col <- c("SERNUM","BENUNIT","BUKIDS","ADDMON","OAEXPNS","OAHOWPY1","OAHOWPY2","OAHOWPY3","OAHOWPY4","OAHOWPY5","OAHOWPY6","DEBT1",
+                  "DEBT2", "DEBT3", "DEBT4", "DEBT5", "DEBT6", "DEBT7", "DEBT8", "DEBT9", "TOTSAVBU","TOTCAPB3")
+    #No DISCHHA1, DISCHC1, DISWHHA1 or DISWHHC1. No GVTREGNO as old coding. No BURDEN. GROSS4 -> gross4.
+    hhold_col <- c("SERNUM","HRPNUM", "HHINC", "HBENINC", "HEARNS","HHIRBEN","HHLDR01","HHLDR02","HHLDR03","HHLDR04","HHLDR05","HHLDR06","HHLDR07",
+                   "HHLDR08","HHLDR09","HHLDR10","HHLDR11","HHLDR12","HHLDR13","HHLDR14","HHLDR97","HHSTAT", "DEPCHLDH",
+                   "GBHSCOST", "GIVEHELP", "GVTREGN", "PTENTYP2", "BEDROOM6", "gross4", "HHRENT")
+    hbai_col <- c("SERNUM", "BENUNIT","AHCDEF","BHCDEF","EBENINBU","EBENINHH","EGRERNBU","EGRERNHH","EGRINCBU","EGRINCHH","EHBENBU","EMISCIBU","EMISCIHH",
+                  "ENTERNBU","ENTERNHH","ENTINCBU","ENTINCHH","EQOAHCHH","EQOBHCHH","ES_HCOST","ESAHCHH","ESBENIBU","ESBENIHH","ESGINCBU",
+                  "ESGINCHH","ESGINVBU","ESGINVHH","ESGJOBBU","ESGJOBHH","ESGJOBSP","ESGOCCBU","ESGOCCHH","ESGRSEBU","ESGRSEHH","ESGRSESP",
+                  "ESMISCBU","ESMISCHH","ESNINCBU","ESNINCHH","ESPRIBBU","ESPRIBHH","G_NEWAD","G_NEWBU","G_NEWCH","G_NEWHH","G_NEWPN",
+                  "G_NEWPP","G_NEWWA","GINSEBU","GNEWHHP","GS_NEWAD","GS_NEWBU","GS_NEWCH","GS_NEWHH","GS_NEWPN","GS_NEWPP","GS_NEWPPH",
+                  "GS_NEWWA","HBENBU","HBMORT","HBXMORT","HRENTHH","INSEBU","ISBU","EAHCHH", "ECOBU")
+  }    
   
   col_names <- list(child_col,adult_col,benu_col,hhold_col,hbai_col)
   

@@ -20,94 +20,8 @@ install.packages("survey")
 require("survey")
 
 
-### Source and define calculating functions ####
-
-## Make flatfiles for each year
+## Make flatfiles for each year####
 source("make_flatfile.R")
-## attach ownership thresholds
-source("attach_ownership_thresh.R")
-##Logical flags for later analysis #
-source("calculate_logical_flags.R")
-## Calculate deflated household incomes 
-source("calculate_household_incomes.R")
-source("calculate_weights.R")
-## Tidy up tenure 
-source("tidy_tenure.R")
-## Tidy up regions 
-source("tidy_regions.R")
-
-source("plot_survey_grpdregion.R")
-
-flag.affordability <- function(data_table){
-  #Flag for eligible for Starter Homes
-  data_table[ , eligible_starter := ifelse(HDAGE <4, 1, 0)]
-  
-  # flag if can afford ownership, using gross household income minus income related benefits
-  
-  data_table[ , aff_starterm_noincben := 0]
-  data_table[ , aff_starterm_noincben := ifelse( (hh_grossinc_noincben >= starter_med & HDAGE < 4), 1, 0 )]
-  data_table[ , aff_starterm_noincben := ifelse( HDAGE >3, 2, aff_starterm_noincben)]
-  #Make into factors
-  # data_table[ , aff_starterm_noincben := factor(aff_starterm_noincben, levels = c(0, 1, 2), 
-  #                                               labels = c("Can't afford", "Can afford", "Ineligible"))]
-  
-  data_table[ , aff_starterlq_noincben := 0]
-  data_table[ , aff_starterlq_noincben := ifelse( (hh_grossinc_noincben >= starter_lq & HDAGE < 4) , 1, 0 )]
-  data_table[ , aff_starterlq_noincben := ifelse( HDAGE >3, 2, aff_starterlq_noincben)]
-  #Make into factors
-  # data_table[ , aff_starterlq_noincben := factor(aff_starterlq_noincben, levels = c(0, 1, 2), 
-  #                                               labels = c("Can't afford", "Can afford", "Ineligible"))]
-  
-  data_table[ , aff_htb_noincben := ifelse( hh_grossinc_noincben >= helptobuy, 1, 0 )]
-  #Make into factors
-  # data_table[ , aff_htb_noincben := factor(aff_htb_noincben, levels = c(0, 1), 
-  #                                                labels = c("Can't afford", "Can afford"))]
-  data_table[ , aff_shared_noincben := ifelse( hh_grossinc_noincben >= shared, 1, 0 )]
-  #Make into factors
-  # data_table[ , aff_shared_noincben := factor(aff_shared_noincben, levels = c(0, 1), 
-  #                                          labels = c("Can't afford", "Can afford"))]
-  
-    ##Add has deposit variables
-  data_table[ , has_starterlqdep := ifelse(bu_savings >= starter_lqdeposit, 1, 0 )]
-  data_table[ , has_startermdep := ifelse(bu_savings >= starter_mdeposit, 1, 0 )]
-  data_table[ , has_htbdep := ifelse(bu_savings >= helptobuy_deposit, 1, 0 )]
-  data_table[ , has_shareddep := ifelse(bu_savings >= shared_deposit, 1, 0 )]
-  
-  ##Add definitely can't save for it in 5 years
-  # data_table[ , cant_starterlqdep := ifelse( (bu_savings < (starter_lqdeposit - 600)) & ADDMON == 2, 1, 0 )]
-  # data_table[ , cant_startermdep := ifelse( (bu_savings < (starter_mdeposit - 600)) & ADDMON == 2, 1, 0 )]
-  # data_table[ , cant_htbdep := ifelse( (bu_savings < (helptobuy_deposit - 600)) & ADDMON == 2, 1, 0 )]
-  # data_table[ , cant_shareddep := ifelse( (bu_savings < (shared_deposit - 600)) & ADDMON == 2, 1, 0 )]
-  
-  #Difference between deposit and savings
-  data_table[ , diff_starterlqdep := (starter_lqdeposit - bu_savings)]
-  data_table[ , diff_startermdep := (starter_mdeposit - bu_savings)]
-  data_table[ , diff_htbdep := (helptobuy_deposit - bu_savings)]
-  data_table[ , diff_shareddep := (shared_deposit - bu_savings)]
-  
-  #Flag for financial stress; behind on two debts (rent, utilities, loans) or behind twice or more on any of them individually
-  data_table[ , behind_debts := ifelse( DEBTFRE1 == 2 | DEBTFRE2 == 2 | DEBTFRE3 == 2 | (DEBTFRE1 == 1 & DEBTFRE2 == 1) | 
-                                          (DEBTFRE1 == 1 & DEBTFRE3 == 1) | (DEBTFRE2 == 1 & DEBTFRE3 == 1 ), 1, 0 )]
-  
-  
-  #Flag for don't have deposit and financial stress
-  data_table[ , cant_starterlqdep := ifelse( (bu_savings < (starter_lqdeposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-  data_table[ , cant_startermdep := ifelse( (bu_savings < (starter_mdeposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-  data_table[ , cant_htbdep := ifelse( (bu_savings < (helptobuy_deposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-  data_table[ , cant_shareddep := ifelse( (bu_savings < (shared_deposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-  
-  #flag for shared ownership situation
-  data_table[ , affanddep_shared := 0]
-  data_table[ , affanddep_shared := ifelse(aff_shared_noincben==1 & cant_shareddep==1, 1 , 0)]
-  data_table[ , affanddep_shared := ifelse(aff_shared_noincben==1 & cant_shareddep==0, 2 , affanddep_shared)]
-  data_table[ , affanddep_shared := ifelse(aff_shared_noincben==0 , 0 , affanddep_shared)]
-  
-  data_table[ , affanddep_shared := factor(affanddep_shared, levels = c(0, 1, 2), labels = c("Can't afford", "Can afford but can't save deposit", "Can afford and can save or has deposit"))]
-  
-}
-
-#####~~~~~ Start Analysis ~~~~#####
-
 curr_data_dir <- "S:/@Communications, Policy and Campaigns/Research/STATS & INFO/Statistics/Household Surveys/"
 derived_data_dir <- "~/R analysis/whos_missed_out/derived data sets/"
 results_dir <- "S:/@Communications, Policy and Campaigns/Research/RESEARCH/More Affordable Homes/Social housing attitudes and needs/Needs/"
@@ -122,109 +36,252 @@ affdt_1314[ , year := 1314]
 affdt_1415[ , year := 1415]
 affdt_1213[ , year := 1213]
 
-
 ## append datasets together, creating missing value variables for each file where columns are missing (set argument fill=TRUE on rbindlist())
 l <- list(affdt_1314, affdt_1415)
 affdt_1315 <- rbindlist(l, fill = TRUE)
+
+l_more <- list(affdt_1213, affdt_1314, affdt_1415)
+affdt_1215 <- rbindlist(l_more, fill = TRUE)
+
+#clean up
+rm(affdt_1213)
+rm(affdt_1314)
+rm(affdt_1415)
 rm(l)
-
-l <- list(affdt_1213, affdt_1314, affdt_1415)
-affdt_1215 <- rbindlist(l, fill = TRUE)
-rm(l)
+rm(l_more)
 
 
-## Prep 12-15 data set ####
-affdt_1215 <- attach.ownership.thresh(affdt_1215, derived_data_dir)
-affdt_1215 <- calculate.logical.flags(affdt_1215, "1215")
-affdt_1215 <- calculate.household.incomes(affdt_1215, "HBAI")
-affdt_1215 <- calculate.weights(affdt_1215, 3)
-affdt_1215 <- tidy.tenure(affdt_1215)
 
-#Do after attaching thresholds
-affdt_1215 <- tidy.regions(affdt_1215, "1215")
+############ Attach 14/15 ownership product thresholds####
+owner_thresh <- read.csv(paste0(derived_data_dir,"20160815_UdatedOwnershipThresholds.csv"), stringsAsFactors = FALSE)
+owner_thresh <- data.table(owner_thresh)
+
+own_keycols = c("GVTREGN")
+own_cols = c("GVTREGN", "starter_med", "starter_lq", "helptobuy", "shared", "starter_mdeposit",  "starter_lqdeposit", 
+             "helptobuy_deposit", "shared_deposit" )
+
+setkeyv(affdt_1215, own_keycols)
+setkeyv(owner_thresh, own_keycols)
+
+affdt_1215 <- merge(affdt_1215 , owner_thresh[ , .SD, .SDcols = own_cols], by = own_keycols, all.x = TRUE)
+
+## select England only, stuff to make weights work ####
+affdt_1215 <- affdt_1215[ (GVTREGN != 299999999 & GVTREGN != 399999999 & GVTREGN != 499999999),  ]
+
+#flag for don't have HBAI variables
+affdt_1215[ , nohbai_inc := ifelse( (is.na(ESGINCHH) | is.na(BHCDEF) | is.na(HBENBU)) , 1, 0) ]
+## Flag for households with more than 1 benefit unit
+affdt_1215[ , not_1stbenu := ifelse(BENUNIT >1 , 1, 0)]
+affdt_1215[ , multiple_benu := ifelse( (sum(not_1stbenu) > 0), 1, 0 ), by = .(SERNUM, year) ]
+
+#Flag for is HRP - can also be used to collapse dataset down to household level for household level variables
+affdt_1215[ , is_HRP := ifelse( PERSON == HRPNUM, 1, 0) ]
+
+#Add 2 year hhd weight
+#affdt_1315_1BU[ , hhweight_2 := GS_NEWHH/2]
+affdt_1215[ , hhweight_3 := GS_NEWHH/3]
+
+## Tidy up region, create grouped regions ####
+affdt_1215[ , GVTREGN := factor(GVTREGN, labels = c("North East", "North West", "Yorkshire and Humber", "East Midlands",
+                                                        "West Midlands", "East", "London", "South East", "South West"))]
+
+#Create some grouped regions to get decent sample breakdowns
+affdt_1215[ , grpd_region1 := 0.0]
+affdt_1215[ , grpd_region1 := ifelse(GVTREGN=="North East" | GVTREGN=="North West" | GVTREGN=="Yorkshire and Humber", 
+                                         1.0, grpd_region1 )]
+affdt_1215[ , grpd_region1 := ifelse(GVTREGN=="West Midlands" | GVTREGN=="South West" , 
+                                         2.0, grpd_region1 )]
+affdt_1215[ , grpd_region1 := ifelse(GVTREGN=="East Midlands" | GVTREGN=="East" , 
+                                         3.0, grpd_region1 )]
+affdt_1215[ , grpd_region1 := ifelse(GVTREGN=="London" | GVTREGN=="South East" , 
+                                         4.0, grpd_region1 )]
+
+affdt_1215[ , grpd_region1 := factor(grpd_region1, labels = c("North", "West", "East", "London & S. East"))]
+
+
+#### Logical flags for later analysis##########
+
+##Has at least one school age kids
+affdt_1215[ ,  has_kids16 := ifelse( (sum(AGEc <= 16) >0) , 1, 0 ), by=.(SERNUM, year)]
+
+## Lone parent flag
+affdt_1215[ , single_parent := 0]
+affdt_1215[ , single_parent := ifelse((BUKIDS == 5 | BUKIDS == 6 | BUKIDS == 7 | BUKIDS == 8), 1, 0)]
+affdt_1215[ , single_parent := ifelse(DEPCHLDH == 0, 0, single_parent)]
+
+## single mum flag
+affdt_1215[ , single_mum := 0]
+affdt_1215[ , single_mum := ifelse((single_parent==1 & PERSON == HRPNUM & SEXa==2), 1, 0)]
+
+## Has at least one disabled adult
+affdt_1215[ ,  has_disabledad := ifelse( DISCHHA1 > 0 , 1, 0 ), by=.(SERNUM, year)]
+## Has at least one disabled child
+affdt_1215[ ,  has_disabledch := ifelse( DISCHHC1 > 0 , 1, 0 ), by=.(SERNUM, year)]
+## Has at least one pensioner
+affdt_1215[ ,  has_pensioner := FALSE]
+affdt_1215[ ,  has_pensioner := ifelse( sum(HDAGE==6) >0 , TRUE, FALSE ), by=.(SERNUM, year)]
+## Head of household is pensioner
+affdt_1215[ ,  head_pensioner := ifelse( (PERSON==HRPNUM & HDAGE==6) , 1, 0 ), by=.(SERNUM, year)]
+
+#flag someone working
+affdt_1215[ is.na(ECOBU), ECOBU := 999]
+affdt_1215[ ,  has_working := 0]
+affdt_1215[ ,  has_working := ifelse( (ECOBU != 6 & ECOBU != 7 & ECOBU != 8) , 1, 0 ), by=.(SERNUM, year)]
+
+#Caring responsibilities
+affdt_1215[ is.na(WHOLOO01), WHOLOO01 := 999]
+affdt_1215[ is.na(WHOLOO02), WHOLOO02 := 999]
+affdt_1215[ is.na(WHOLOO03), WHOLOO03 := 999]
+affdt_1215[ is.na(WHOLOO04), WHOLOO04 := 999]
+affdt_1215[ is.na(WHOLOO05), WHOLOO05 := 999]
+affdt_1215[ is.na(WHOLOO06), WHOLOO06 := 999]
+affdt_1215[ is.na(WHOLOO07), WHOLOO07 := 999]
+affdt_1215[ is.na(WHOLOO08), WHOLOO08 := 999]
+affdt_1215[ is.na(WHOLOO09), WHOLOO09 := 999]
+affdt_1215[ is.na(WHOLOO10), WHOLOO10 := 999]
+affdt_1215[ is.na(WHOLOO11), WHOLOO11 := 999]
+affdt_1215[ is.na(WHOLOO12), WHOLOO12 := 999]
+affdt_1215[ is.na(WHOLOO13), WHOLOO13 := 999]
+affdt_1215[ is.na(WHOLOO14), WHOLOO14 := 999]
+
+affdt_1215[ , has_carer := FALSE]
+affdt_1215[ , has_carer := ifelse (sum(WHOLOO01 == 1 | WHOLOO02 == 1 | WHOLOO03 == 1 | WHOLOO04 == 1 | WHOLOO05 == 1 | WHOLOO06 == 1 | 
+                                         WHOLOO07 == 1 | WHOLOO08 == 1 |WHOLOO09 == 1 | WHOLOO10 == 1 | WHOLOO11 == 1 | WHOLOO12 == 1 | 
+                                         WHOLOO13 == 1 | WHOLOO14 == 1 ) > 0 , TRUE, FALSE), by=.(SERNUM, year)]
+
+##Flags to try and establish need to be in area
+#Kids looked after by someone outside household -simpler version
+affdt_1215[ is.na(R01), R01 := 999]
+affdt_1215[ is.na(R02), R02 := 999]
+affdt_1215[ is.na(R03), R03 := 999]
+affdt_1215[ is.na(R04), R04 := 999]
+affdt_1215[ is.na(R05), R05 := 999]
+affdt_1215[ is.na(R06), R06 := 999]
+affdt_1215[ is.na(R07), R07 := 999]
+affdt_1215[ is.na(R08), R08 := 999]
+affdt_1215[ is.na(R09), R09 := 999]
+affdt_1215[ is.na(R10), R10 := 999]
+affdt_1215[ is.na(R11), R11 := 999]
+affdt_1215[ is.na(R12), R12 := 999]
+affdt_1215[ is.na(R13), R13 := 999]
+affdt_1215[ is.na(R14), R14 := 999]
+affdt_1215[ , has_resident_grandparent := ifelse (sum(R01 == 16 | R02 == 16 | R03 == 16 | R04 == 16 | R05 == 16 | R06 == 16 | R07 == 16 |
+                                                        R08 == 16 | R09 == 16 | R10 == 16 | R11 == 16 | R12 == 16 | R13 == 16 | 
+                                                        R14 == 16) > 0 , 1, 0), by=.(SERNUM, year)]
+
+
+#kid looked after by non-res parent or ex, friends or neighbours or non-resident grandparent
+affdt_1215[ , kid_care_nonres := FALSE]
+affdt_1215[ , kid_care_nonres := ifelse( (CHLOOK == 14 | CHLOOK == 19 | (CHLOOK == 13 & has_resident_grandparent == 0)), TRUE, FALSE), 
+            by=.(SERNUM, year)]
+
+#recode NA in DEBTFRE variables to 0
+affdt_1215[ is.na(DEBTFRE1), DEBTFRE1 := 0]
+affdt_1215[ is.na(DEBTFRE2), DEBTFRE2 := 0]
+affdt_1215[ is.na(DEBTFRE3), DEBTFRE3 := 0]
+
+#### Calculate deflated household incomes #######################
+## simple gross household income
+#deflate SPI'd gross hhold income to average of survey year
+affdt_1215[ year == '1415',hh_grossinc := ESGINCHH * BHCDEF * 52]
+#inflate 1314 to 1415 prices
+affdt_1215[ year == '1314',hh_grossinc := ESGINCHH * BHCDEF * 52 * (100/99)]
+#inflate 1213 to 1415 prices
+affdt_1215[ year == '1213',hh_grossinc := ESGINCHH * BHCDEF * 52 * (100/96.8)]
+
+## gross household income minus HB (following definiton only suitable for households with 1 ben unit)
+#deflate SPI'd gross hhold income to average of survey year
+affdt_1215[ (year == '1415' & multiple_benu == 0), hh_grossinc_nohb := (ESGINCHH - HBENBU) * BHCDEF * 52]
+#inflate 1314 to 1415 prices
+affdt_1215[ (year == '1314' & multiple_benu == 0), hh_grossinc_nohb:= (ESGINCHH - HBENBU) * BHCDEF * 52 * (100/99)]
+#inflate 1213 to 1415 prices
+affdt_1215[ (year == '1213' & multiple_benu == 0), hh_grossinc_nohb:= (ESGINCHH - HBENBU) * BHCDEF * 52 * (100/96.8)]
+
+## gross household income minus income related benefits (including HB) - most relevant when thinking about ownership products
+affdt_1215[ (year == '1415'), hh_grossinc_noincben := (HHINC - HHIRBEN) * BHCDEF * 52]
+#inflate 1314 to 1415 prices
+affdt_1215[ (year == '1314'), hh_grossinc_noincben:= (HHINC - HHIRBEN) * BHCDEF * 52 * (100/99)]
+#inflate 1213 to 1415 prices
+affdt_1215[ (year == '1213'), hh_grossinc_noincben:= (HHINC - HHIRBEN) * BHCDEF * 52 * (100/96.8)]
+
+
+
 
 ############# Flags for afford sale ########################
-affdt_1215 <- flag.affordability(affdt_1215)
+#Flag for renter
+affdt_1215[ , prs_renter := ifelse(PTENTYP2 == 3 | PTENTYP2 == 4, 1, 0)]
+
+#Flag for eligible for Starter Homes
+affdt_1215[ , eligible_starter := ifelse(HDAGE <4, 1, 0)]
+
+# flag if can afford ownership, using gross household income minus income related benefits
+
+affdt_1215[ , aff_starterm_noincben := 0]
+affdt_1215[ , aff_starterm_noincben := ifelse( (hh_grossinc_noincben >= starter_med & HDAGE < 4), 1, 0 )]
+affdt_1215[ , aff_starterm_noincben := ifelse( HDAGE >3, 2, aff_starterm_noincben)]
+#Make into factors
+# affdt_1215[ , aff_starterm_noincben := factor(aff_starterm_noincben, levels = c(0, 1, 2), 
+#                                               labels = c("Can't afford", "Can afford", "Ineligible"))]
+
+affdt_1215[ , aff_starterlq_noincben := 0]
+affdt_1215[ , aff_starterlq_noincben := ifelse( (hh_grossinc_noincben >= starter_lq & HDAGE < 4) , 1, 0 )]
+affdt_1215[ , aff_starterlq_noincben := ifelse( HDAGE >3, 2, aff_starterlq_noincben)]
+#Make into factors
+# affdt_1215[ , aff_starterlq_noincben := factor(aff_starterlq_noincben, levels = c(0, 1, 2), 
+#                                               labels = c("Can't afford", "Can afford", "Ineligible"))]
+
+affdt_1215[ , aff_htb_noincben := ifelse( hh_grossinc_noincben >= helptobuy, 1, 0 )]
+#Make into factors
+# affdt_1215[ , aff_htb_noincben := factor(aff_htb_noincben, levels = c(0, 1), 
+#                                                labels = c("Can't afford", "Can afford"))]
+affdt_1215[ , aff_shared_noincben := ifelse( hh_grossinc_noincben >= shared, 1, 0 )]
+#Make into factors
+# affdt_1215[ , aff_shared_noincben := factor(aff_shared_noincben, levels = c(0, 1), 
+#                                          labels = c("Can't afford", "Can afford"))]
+##Add has deposit variables
+affdt_1215[ , has_starterlqdep := ifelse(TOTCAPB3 >= starter_lqdeposit, 1, 0 )]
+affdt_1215[ , has_startermdep := ifelse(TOTCAPB3 >= starter_mdeposit, 1, 0 )]
+affdt_1215[ , has_htbdep := ifelse(TOTCAPB3 >= helptobuy_deposit, 1, 0 )]
+affdt_1215[ , has_shareddep := ifelse(TOTCAPB3 >= shared_deposit, 1, 0 )]
+
+##Add definitely can't save for it in 5 years
+# affdt_1215[ , cant_starterlqdep := ifelse( (TOTCAPB3 < (starter_lqdeposit - 600)) & ADDMON == 2, 1, 0 )]
+# affdt_1215[ , cant_startermdep := ifelse( (TOTCAPB3 < (starter_mdeposit - 600)) & ADDMON == 2, 1, 0 )]
+# affdt_1215[ , cant_htbdep := ifelse( (TOTCAPB3 < (helptobuy_deposit - 600)) & ADDMON == 2, 1, 0 )]
+# affdt_1215[ , cant_shareddep := ifelse( (TOTCAPB3 < (shared_deposit - 600)) & ADDMON == 2, 1, 0 )]
+
+#Difference between deposit and savings
+affdt_1215[ , diff_starterlqdep := (starter_lqdeposit - TOTCAPB3)]
+affdt_1215[ , diff_startermdep := (starter_mdeposit - TOTCAPB3)]
+affdt_1215[ , diff_htbdep := (helptobuy_deposit - TOTCAPB3)]
+affdt_1215[ , diff_shareddep := (shared_deposit - TOTCAPB3)]
+
+#Flag for financial stress; behind on two debts (rent, utilities, loans) or behind twice or more on any of them individually
+affdt_1215[ , behind_debts := ifelse( DEBTFRE1 == 2 | DEBTFRE2 == 2 | DEBTFRE3 == 2 | (DEBTFRE1 == 1 & DEBTFRE2 == 1) | 
+                                        (DEBTFRE1 == 1 & DEBTFRE3 == 1) | (DEBTFRE2 == 1 & DEBTFRE3 == 1 ), 1, 0 )]
 
 
-# #Flag for renter
-# affdt_1215[ , prs_renter := ifelse(PTENTYP2 == 3 | PTENTYP2 == 4, 1, 0)]
-# 
-# #Flag for eligible for Starter Homes
-# affdt_1215[ , eligible_starter := ifelse(HDAGE <4, 1, 0)]
-# 
-# # flag if can afford ownership, using gross household income minus income related benefits
-# 
-# affdt_1215[ , aff_starterm_noincben := 0]
-# affdt_1215[ , aff_starterm_noincben := ifelse( (hh_grossinc_noincben >= starter_med & HDAGE < 4), 1, 0 )]
-# affdt_1215[ , aff_starterm_noincben := ifelse( HDAGE >3, 2, aff_starterm_noincben)]
-# #Make into factors
-# # affdt_1215[ , aff_starterm_noincben := factor(aff_starterm_noincben, levels = c(0, 1, 2), 
-# #                                               labels = c("Can't afford", "Can afford", "Ineligible"))]
-# 
-# affdt_1215[ , aff_starterlq_noincben := 0]
-# affdt_1215[ , aff_starterlq_noincben := ifelse( (hh_grossinc_noincben >= starter_lq & HDAGE < 4) , 1, 0 )]
-# affdt_1215[ , aff_starterlq_noincben := ifelse( HDAGE >3, 2, aff_starterlq_noincben)]
-# #Make into factors
-# # affdt_1215[ , aff_starterlq_noincben := factor(aff_starterlq_noincben, levels = c(0, 1, 2), 
-# #                                               labels = c("Can't afford", "Can afford", "Ineligible"))]
-# 
-# affdt_1215[ , aff_htb_noincben := ifelse( hh_grossinc_noincben >= helptobuy, 1, 0 )]
-# #Make into factors
-# # affdt_1215[ , aff_htb_noincben := factor(aff_htb_noincben, levels = c(0, 1), 
-# #                                                labels = c("Can't afford", "Can afford"))]
-# affdt_1215[ , aff_shared_noincben := ifelse( hh_grossinc_noincben >= shared, 1, 0 )]
-# #Make into factors
-# # affdt_1215[ , aff_shared_noincben := factor(aff_shared_noincben, levels = c(0, 1), 
-# #                                          labels = c("Can't afford", "Can afford"))]
-# ##Add has deposit variables
-# affdt_1215[ , has_starterlqdep := ifelse(bu_savings >= starter_lqdeposit, 1, 0 )]
-# affdt_1215[ , has_startermdep := ifelse(bu_savings >= starter_mdeposit, 1, 0 )]
-# affdt_1215[ , has_htbdep := ifelse(bu_savings >= helptobuy_deposit, 1, 0 )]
-# affdt_1215[ , has_shareddep := ifelse(bu_savings >= shared_deposit, 1, 0 )]
-# 
-# ##Add definitely can't save for it in 5 years
-# # affdt_1215[ , cant_starterlqdep := ifelse( (bu_savings < (starter_lqdeposit - 600)) & ADDMON == 2, 1, 0 )]
-# # affdt_1215[ , cant_startermdep := ifelse( (bu_savings < (starter_mdeposit - 600)) & ADDMON == 2, 1, 0 )]
-# # affdt_1215[ , cant_htbdep := ifelse( (bu_savings < (helptobuy_deposit - 600)) & ADDMON == 2, 1, 0 )]
-# # affdt_1215[ , cant_shareddep := ifelse( (bu_savings < (shared_deposit - 600)) & ADDMON == 2, 1, 0 )]
-# 
-# #Difference between deposit and savings
-# affdt_1215[ , diff_starterlqdep := (starter_lqdeposit - bu_savings)]
-# affdt_1215[ , diff_startermdep := (starter_mdeposit - bu_savings)]
-# affdt_1215[ , diff_htbdep := (helptobuy_deposit - bu_savings)]
-# affdt_1215[ , diff_shareddep := (shared_deposit - bu_savings)]
-# 
-# #Flag for financial stress; behind on two debts (rent, utilities, loans) or behind twice or more on any of them individually
-# affdt_1215[ , behind_debts := ifelse( DEBTFRE1 == 2 | DEBTFRE2 == 2 | DEBTFRE3 == 2 | (DEBTFRE1 == 1 & DEBTFRE2 == 1) | 
-#                                         (DEBTFRE1 == 1 & DEBTFRE3 == 1) | (DEBTFRE2 == 1 & DEBTFRE3 == 1 ), 1, 0 )]
-# 
-# 
-# #Flag for don't have deposit and financial stress
-# affdt_1215[ , cant_starterlqdep := ifelse( (bu_savings < (starter_lqdeposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-# affdt_1215[ , cant_startermdep := ifelse( (bu_savings < (starter_mdeposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-# affdt_1215[ , cant_htbdep := ifelse( (bu_savings < (helptobuy_deposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-# affdt_1215[ , cant_shareddep := ifelse( (bu_savings < (shared_deposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
-# 
-# #flag for shared ownership situation
-# affdt_1215[ , affanddep_shared := 0]
-# affdt_1215[ , affanddep_shared := ifelse(aff_shared_noincben==1 & cant_shareddep==1, 1 , 0)]
-# affdt_1215[ , affanddep_shared := ifelse(aff_shared_noincben==1 & cant_shareddep==0, 2 , affanddep_shared)]
-# affdt_1215[ , affanddep_shared := ifelse(aff_shared_noincben==0 , 0 , affanddep_shared)]
-# 
-# affdt_1215[ , affanddep_shared := factor(affanddep_shared, levels = c(0, 1, 2), labels = c("Can't afford", "Can afford but can't save deposit", "Can afford and can save or has deposit"))]
+#Flag for don't have deposit and financial stress
+affdt_1215[ , cant_starterlqdep := ifelse( (TOTCAPB3 < (starter_lqdeposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
+affdt_1215[ , cant_startermdep := ifelse( (TOTCAPB3 < (starter_mdeposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
+affdt_1215[ , cant_htbdep := ifelse( (TOTCAPB3 < (helptobuy_deposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
+affdt_1215[ , cant_shareddep := ifelse( (TOTCAPB3 < (shared_deposit - 1000)) & (ADDMON == 2 | behind_debts==1), 1, 0 )]
+
+#flag for shared ownership situation
+affdt_1215[ , affanddep_shared := 0]
+affdt_1215[ , affanddep_shared := ifelse(aff_shared_noincben==1 & cant_shareddep==1, 1 , 0)]
+affdt_1215[ , affanddep_shared := ifelse(aff_shared_noincben==1 & cant_shareddep==0, 2 , affanddep_shared)]
+affdt_1215[ , affanddep_shared := ifelse(aff_shared_noincben==0 , 0 , affanddep_shared)]
+
+affdt_1215[ , affanddep_shared := factor(affanddep_shared, levels = c(0, 1, 2), labels = c("Can't afford", "Can afford but can't save deposit", "Can afford and can save or has deposit"))]
 
 ############ Table fun! #################################
 
 #Create survey object from data table, limiting to HRP so household weights work. Need to restrict to cases with non-missing weights
-deshhd_1215 <- svydesign(ids = ~1, weights = ~ hhweight, data = affdt_1215[affdt_1215$is_HRP & 
-                                                                               (is.na(affdt_1215$hhweight) == F & 
+deshhd_1215 <- svydesign(ids = ~1, weights = ~ hhweight_3, data = affdt_1215[affdt_1215$is_HRP & 
+                                                                               (is.na(affdt_1215$hhweight_3) == F & 
                                                                                   multiple_benu == 0), ])
-## Data table and survey of working private renters - defined as head of household employed according to ILO
-affdt_1215_prswork <- affdt_1215[ (!is.na(hhweight) & multiple_benu == 0 & is_HRP & prs_renter == 1 & DVIL04A == 1 ), ]
-des_prs_work <- subset(deshhd_1215, (prs_renter == 1 & DVIL04A == 1))
-des_prs_work <- update(des_prs_work, grpd_region1 = factor(grpd_region1))
-des_prs_naff <- subset(des_prs_work, aff_shared_noincben ==0)
+
 
 #Private renters ages
 ftable(svyby(formula = ~factor(HDAGE), by = ~GVTREGN, design = subset(deshhd_1215, prs_renter == 1), FUN = svymean))
@@ -237,6 +294,9 @@ svymean(~factor(HDAGE), design = subset(deshhd_1215, prs_renter == 1))
 
 #### Results for working private renters ####
 
+## Data table and survey of working private renters - defined as head of household employed according to ILO
+affdt_1215_prswork <- affdt_1215[ (!is.na(hhweight_3) & multiple_benu == 0 & is_HRP & prs_renter == 1 & DVIL04A == 1 ), ]
+des_prs_work <- subset(deshhd_1215, (prs_renter == 1 & DVIL04A == 1))
 
 ggplot(affdt_1215_prswork[GVTREGN == "London"], 
        aes(x = hh_grossinc_noincben, weight = hhweight_3)) +
@@ -258,7 +318,7 @@ ftable(svyby(formula = ~factor(aff_shared_noincben), by = ~GVTREGN, design = sub
 
 affdt_1215_prswork[ , sjt.xtab(aff_starterlq_noincben, GVTREGN,
                                         var.labels=c("Can afford LQ Starter", "Region"), 
-                                        weight.by = hhweight, 
+                                        weight.by = hhweight_3, 
                                         show.col.prc = TRUE,
                                         use.viewer = FALSE)
                     ]
@@ -294,7 +354,7 @@ affdt_1215_prswork[ , sjt.xtab(aff_shared_noincben, GVTREGN,
 affdt_1215_prswork[ , sjt.xtab(((HDAGE < 5 & aff_starterlq_noincben==1) | aff_htb_noincben==1 | aff_shared_noincben==1), GVTREGN,
                                var.labels=c("Can afford anything", "Region"), 
                                value.labels = c("Can't afford", "Can afford"),
-                               #weight.by = hhweight, 
+                               weight.by = hhweight_3, 
                                show.col.prc = TRUE,
                                use.viewer = FALSE)
                     ]
@@ -435,13 +495,6 @@ ggplot(na.omit(t_emply_prsshare), aes(x = svymean, xmin = svymean-SE, xmax = svy
   ggtitle("Self-reported employment of head for PRS households under 55 who can't afford Shared Ownership") + facet_grid(grpd_region1 ~ .)
 
 
-des_prs_work <-update(des_prs_work, SELFDEMP = factor(SELFDEMP))
-plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "SELFDEMP", var_levels = c("SELFDEMP1", "SELFDEMP2", "SELFDEMP3", "SELFDEMP4", "SELFDEMP5",
-                                                                                                         "SELFDEMP6", "SELFDEMP7", "SELFDEMP8", "SELFDEMP9", "SELFDEMP10"),
-                       var_labels = c("Full-time", "Part-time", "FT self-employed", "PT self-employed",
-                                      "Unemployed", "Student", "Family home", "Disabled", "Retired", "Other"), 
-                       p_title = "Self-reported situation of struggling PRS ", region = "grpd_region1")
-
 # Employment of whole household ####
 des_prs_work <-update(des_prs_work, ECOBU = factor(ECOBU)) 
 svymean(~ECOBU, design = subset(des_prs_work, aff_shared_noincben == 0))
@@ -575,16 +628,6 @@ ftable( svyby(formula = ~factor(has_kids16), by = ~grpd_region1,
               design = des_prs_work, 
               FUN = svymean, na.rm = TRUE))
 
-des_prs_work <- update(des_prs_work, has_kids16 = factor(has_kids16))
-t_kids16_naff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "has_kids16", 
-                                        var_levels = c("has_kids160", "has_kids161"),
-                                        var_labels = c("No school age kids", "Has school age kids"), 
-                                        p_title = "School age kids? - struggling PRS ", region = "grpd_region1")
-
-t_kids16_prswork <- plot.survey.grpdregion(my_design = des_prs_work, "has_kids16", 
-                                        var_levels = c("has_kids160", "has_kids161"),
-                                        var_labels = c("No school age kids", "Has school age kids"), 
-                                        p_title = "School age kids? - struggling PRS ", region = "grpd_region1")
 
 
 ##single parents
@@ -602,19 +645,6 @@ ftable( svyby(formula = ~factor(single_parent), by = ~grpd_region1,
 ftable( svyby(formula = ~factor(single_parent), by = ~grpd_region1, 
               design = des_prs_work, 
               FUN = svymean, na.rm = TRUE))
-
-des_prs_work <- update(des_prs_work, single_parent = factor(single_parent))
-
-t_singlep_naff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "single_parent", 
-                                         var_levels = c("single_parent0", "single_parent1"),
-                                         var_labels = c("Not Single parent head", "Single parent head "), 
-                                         p_title = "Single parent? - can't afford shared ownership working PRS ", region = "grpd_region1")
-
-t_singlep_prswork <- plot.survey.grpdregion(my_design = des_prs_work, "single_parent", 
-                                         var_levels = c("single_parent0", "single_parent1"),
-                                         var_labels = c("Not Single parent head", "Single parent head "), 
-                                         p_title = "Single parent? - all working PRS ", region = "grpd_region1")
-
 
 # #can't afford shared - prs working
 # ftable( svyby(formula = ~factor(single_parent), by = ~grpd_region1, 
@@ -683,19 +713,33 @@ svytotal(~factor(has_disabledad | has_disabledch), design = des_prs_work)
 svymean(~factor(has_disabledad | has_disabledch), design = subset(des_prs_work, aff_shared_noincben == 0))
 svymean(~factor(has_disabledad | has_disabledch), design = des_prs_work)
 
-des_prs_work <- update(des_prs_work, disabled_adch = ifelse(has_disabledad | has_disabledch, 1, 0))
-des_prs_work <- update(des_prs_work, disabled_adch = factor(disabled_adch))
+#can't afford shared
+ftable( svyby(formula = ~factor(has_disabledad | has_disabledch), by = ~grpd_region1, 
+              design = subset(des_prs_work, aff_shared_noincben == 0), 
+              FUN = svymean, na.rm = TRUE))
+#cf all prs under 55
+ftable( svyby(formula = ~factor(has_disabledad | has_disabledch), by = ~grpd_region1, 
+              design = des_prs_work, 
+              FUN = svymean, na.rm = TRUE))
 
-t_disabled_naff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "disabled_adch", 
-                                         var_levels = c("disabled_adch0", "disabled_adch1"),
-                                         var_labels = c("No disabled household member", "Disabled person in household"), 
-                                         p_title = "Disabled adult or child? - can't afford shared ownership working PRS ", region = "grpd_region1")
+affdt_1215_prswork[ aff_shared_noincben == 0, sjt.xtab(factor(has_disabledad), grpd_region1,
+                                                       var.labels=c("Disabled adult?", "Grouped region"), 
+                                                       #value.labels = c("Can't afford", "Can afford"),
+                                                       weight.by = hhweight_3, 
+                                                       show.col.prc = TRUE,
+                                                       #show.row.prc = TRUE,
+                                                       use.viewer = FALSE)
+                     ]
 
-t_disabled_prswork <- plot.survey.grpdregion(my_design = des_prs_work, "disabled_adch", 
-                                            var_levels = c("disabled_adch0", "disabled_adch1"),
-                                            var_labels = c("No disabled household member", "Disabled person in household"), 
-                                            p_title = "Disabled adult or child? - all working PRS ", region = "grpd_region1")
-
+#children
+affdt_1215_prswork[ aff_shared_noincben == 0, sjt.xtab(factor(has_disabledch), grpd_region1,
+                                                       var.labels=c("Disabled child?", "Grouped region"), 
+                                                       #value.labels = c("Can't afford", "Can afford"),
+                                                       weight.by = hhweight_3, 
+                                                       show.col.prc = TRUE,
+                                                       #show.row.prc = TRUE,
+                                                       use.viewer = FALSE)
+                    ]
 
 
 ##Caring reponsibilities ####
@@ -705,19 +749,14 @@ svytotal(~has_carer, design = des_prs_work, na.rm = TRUE)
 svymean(~has_carer, design = subset(des_prs_work, aff_shared_noincben == 0), na.rm = TRUE)
 svymean(~has_carer, design = des_prs_work, na.rm = TRUE)
 
-
-des_prs_work <- update(des_prs_work, has_carer = factor(has_carer))
-t_carer_naff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "has_carer", 
-                       var_levels = c("has_carerFALSE", "has_carerTRUE"),
-                       var_labels = c("No carer", "Has carer"), 
-                       p_title = "Has carer? - can't afford shared ownership working PRS", region = "grpd_region1")
-
-t_carer_prswork <- plot.survey.grpdregion(my_design = des_prs_work, "has_carer", 
-                                      var_levels = c("has_carerFALSE", "has_carerTRUE"),
-                                      var_labels = c("No carer", "Has carer"), 
-                                      p_title = "Has carer? - all working PRS", region = "grpd_region1")
-
-
+#can't afford shared
+ftable( svyby(formula = ~has_carer, by = ~grpd_region1, 
+              design = subset(des_prs_work, aff_shared_noincben == 0), 
+              FUN = svymean, na.rm = TRUE))
+#cf all prs under 55
+ftable( svyby(formula = ~has_carer, by = ~grpd_region1, 
+              design = des_prs_work, 
+              FUN = svymean, na.rm = TRUE))
 
 
 #care given outside hhld
@@ -727,18 +766,14 @@ svytotal(~factor(GIVEHELP), design = des_prs_work)
 svymean(~factor(GIVEHELP), design = subset(des_prs_work, aff_shared_noincben == 0))
 svymean(~factor(GIVEHELP), design = des_prs_work)
 
-des_prs_work <- update(des_prs_work, GIVEHELP = factor(GIVEHELP))
-t_givehelp_naff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "GIVEHELP", 
-                                          var_levels = c("GIVEHELP1", "GIVEHELP2"),
-                                          var_labels = c("Helps outside", "Doesn't"), 
-                                          p_title = "Help given outside hhld? - can't afford shared ownership, working PRS ", 
-                                          region = "grpd_region1")
-
-t_givehelp_prswork <- plot.survey.grpdregion(my_design = des_prs_work, "GIVEHELP", 
-                                          var_levels = c("GIVEHELP1", "GIVEHELP2"),
-                                          var_labels = c("Helps outside", "Doesn't"), 
-                                          p_title = "Help given outside hhld? - all working PRS ", 
-                                          region = "grpd_region1")
+#can't afford shared
+ftable( svyby(formula = ~factor(GIVEHELP), by = ~grpd_region1, 
+              design = subset(des_prs_work, aff_shared_noincben == 0), 
+              FUN = svymean, na.rm = TRUE))
+#cf all prs under 55
+ftable( svyby(formula = ~factor(GIVEHELP), by = ~grpd_region1, 
+              design = des_prs_work, 
+              FUN = svymean, na.rm = TRUE))
 
 
 
@@ -760,155 +795,188 @@ t_givehelp_prswork <- plot.survey.grpdregion(my_design = des_prs_work, "GIVEHELP
 #               design = des_prs_work, 
 #               FUN = svymean, na.rm = TRUE))
 
-#Financial vulnerability - can't afford shared ownership ####
-
-# Savings - can't afford
-t_savings_prsnaff <- as.data.frame(svyby(~bu_savings, by = ~grpd_region1, design = des_prs_naff, 
-                                           FUN = svyquantile, 
-                                           quantiles = c(0.1, 0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9), ci = TRUE, na.rm = TRUE))
-
-t_nosavings_prsnaff <- as.data.frame(svyby(~(bu_savings==0), by = ~grpd_region1, design = des_prs_naff, 
-                                             FUN = svymean, na.rm = TRUE))
-
-svymean(~(bu_savings==0), design = des_prs_naff, ci = TRUE)
-
-# Compare with savings - all working PRS households 
-t_savings_prswork <- as.data.frame(svyby(~bu_savings, by = ~grpd_region1, design = des_prs_work, 
-                                         FUN = svyquantile, 
-                                         quantiles = c(0.1, 0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9), ci = TRUE, na.rm = TRUE))
-
-t_nosavings_prswork <- as.data.frame(svyby(~(bu_savings==0), by = ~grpd_region1, design = des_prs_work, 
-                                           FUN = svymean, na.rm = TRUE))
-
-svymean(~(bu_savings==0), design = des_prs_work, ci = TRUE)
-
-# Can save £10 a month?
-des_prs_work <- update(des_prs_work, ADDMON = factor(ADDMON))
-t_save10_prsnaff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "ADDMON", var_levels = c("ADDMON1", "ADDMON2", "ADDMON3", "ADDMON4"),
-                       var_labels = c("Do this", "Like to but can't afford", "Don't want to",  "Does not apply" ), 
-                       p_title = "Can save £10 a month? - can't afford shared ownership, working PRS ", region = "grpd_region1")
-svymean(~ADDMON, design = subset(des_prs_work, aff_shared_noincben == 0), ci = TRUE, na.rm = TRUE)
+#Ability to save/behind on debts - can't afford shared ownership ####
 
 
-t_save10_prswork <- plot.survey.grpdregion(des_prs_work, "ADDMON", var_levels = c("ADDMON1", "ADDMON2", "ADDMON3", "ADDMON4"),
-                       var_labels = c("Do this", "Like to but can't afford", "Don't want to",  "Does not apply" ), 
-                       p_title = "Can save £10 a month? - working PRS ", region = "grpd_region1")
+#average savings
+svyquantile(~TOTCAPB3, design = subset(des_prs_work, aff_shared_noincben ==0), quantile = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9), ci = TRUE)
+svymean(~TOTCAPB3, design = subset(des_prs_work, aff_shared_noincben ==0), ci = TRUE)
 
-svymean(~ADDMON, design = des_prs_work, ci = TRUE, na.rm = TRUE)
+#% no savings can't afford
+affdt_1215_prswork[ aff_shared_noincben == 0, sjt.xtab(TOTCAPB3 <=0, grpd_region1,
+                                                       var.labels=c("No savings?", "Grouped region"), 
+                                                       #value.labels = c("Can't afford", "Can afford"),
+                                                       weight.by = hhweight_3, 
+                                                       show.col.prc = TRUE,
+                                                       #show.row.prc = TRUE,
+                                                       use.viewer = FALSE)
+                    ]
 
-#Behind on rent
-des_prs_work <- update(des_prs_work, DEBTFRE1 = factor(DEBTFRE1))
-t_behindrent_prsnaff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "DEBTFRE1", 
-                       var_levels = c("DEBTFRE10", "DEBTFRE11", "DEBTFRE12"),
-                       var_labels = c("Not behind", "Behind once", "Behind twice or more"), 
-                       p_title = "Behind with rent? - can't afford shared ownership, PRS ", region = "grpd_region1")
+#all PRS working
+affdt_1215_prswork[ , sjt.xtab(TOTCAPB3 <=0, grpd_region1,
+                               var.labels=c("No savings? All PRS", "Grouped region"), 
+                               #value.labels = c("Can't afford", "Can afford"),
+                               weight.by = hhweight_3, 
+                               show.col.prc = TRUE,
+                               #show.row.prc = TRUE,
+                               use.viewer = FALSE)
+                    ]
 
-svymean(~DEBTFRE1, design = subset(des_prs_work, aff_shared_noincben == 0), ci = TRUE, na.rm = TRUE)
-
-plot.survey.grpdregion(des_prs_work, "DEBTFRE1", var_levels = c("DEBTFRE10", "DEBTFRE11", "DEBTFRE12"),
-                       var_labels = c("Not behind", "Behind once", "Behind twice or more"), 
-                       p_title = "Behind with rent? - working PRS ", region = "grpd_region1")
-
-#Housing costs a burden
-des_prs_work <- update(des_prs_work, BURDEN = factor(BURDEN))
-t_burden_prsnaff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "BURDEN", 
-                       var_levels = c("BURDEN1", "BURDEN2", "BURDEN3"),
-                       var_labels = c("Heavy burden", "Slight burden", "Not a burden"), 
-                       p_title = "Housing costs a burden? - can't afford shared ownership, PRS ", region = "grpd_region1")
-
-svymean(~BURDEN, design = subset(des_prs_work, aff_shared_noincben == 0), ci = TRUE, na.rm = TRUE)
-
-t_burden_prswork <- plot.survey.grpdregion(des_prs_work, "BURDEN", 
-                       var_levels = c("BURDEN1", "BURDEN2", "BURDEN3"),
-                       var_labels = c("Heavy burden", "Slight burden", "Not a burden"), 
-                       p_title = "Housing costs a burden? - all working PRS ", region = "grpd_region1")
-svymean(~BURDEN, design = des_prs_work, ci = TRUE, na.rm = TRUE)
+#Ability to save at least £10 a month
+des_prs_work <-update(des_prs_work, ADDMON = factor(ADDMON)) 
+t_save10_prsshare <- as.data.frame( ftable( svyby(formula = ~ADDMON, by = ~grpd_region1, 
+                                                  design = subset(des_prs_work, aff_shared_noincben == 0), 
+                                                  FUN = svymean, na.rm = TRUE))
+)
 
 
-#Behind on utilities
-des_prs_work <- update(des_prs_work, DEBTFRE2 = factor(DEBTFRE2))
-t_behindutilities_prsnaff <- plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "DEBTFRE2", 
-                       var_levels = c("DEBTFRE20", "DEBTFRE21", "DEBTFRE22"),
-                       var_labels = c("Not behind", "Behind once", "Behind twice or more"), 
-                       p_title = "Behind with utilities? - can't afford shared ownership, PRS ", region = "grpd_region1")
+t_save10_prsshare <- dcast(t_save10_prsshare, grpd_region1 + Var3 ~ Var2)
+t_save10_prsshare$Var3 <- factor(t_save10_prsshare$Var3, levels = c("ADDMON1", "ADDMON2", "ADDMON3", "ADDMON4"),
+                                 labels = c("Do this", "Like to but can't afford", 
+                                            "Don't want to",  "Does not apply" ))
 
-svymean(~DEBTFRE2, design = subset(des_prs_work, aff_shared_noincben == 0), ci = TRUE, na.rm = TRUE)
+#Plot as points with error bars
+#by region
+ggplot(na.omit(t_save10_prsshare), aes(x = svymean, xmin = svymean-SE, xmax = svymean+SE, y = grpd_region1, colour = grpd_region1)) +
+  geom_point() + geom_segment( aes(x = svymean-SE, xend = svymean+SE, y = grpd_region1, yend=grpd_region1)) +
+  xlab("Prop in category") + guides(colour=FALSE) + ylab("Grouped region")+
+  ggtitle("Ability to save £10 for PRS households under 55 who can't afford Shared Ownership") + facet_grid( Var3~ .)
 
-plot.survey.grpdregion(des_prs_work, "DEBTFRE2", var_levels = c("DEBTFRE20", "DEBTFRE21", "DEBTFRE22"),
-                       var_labels = c("Not behind", "Behind once", "Behind twice or more"), 
-                       p_title = "Behind with utilities? - working PRS ", region = "grpd_region1")
+#pretty table
+affdt_1215_prswork[ aff_shared_noincben == 0, sjt.xtab(ADDMON, grpd_region1,
+                                                       var.labels=c("Save £10?", "Grouped region"), 
+                                                       #value.labels = c("Can't afford", "Can afford"),
+                                                       weight.by = hhweight_3, 
+                                                       show.col.prc = TRUE,
+                                                       #show.row.prc = TRUE,
+                                                       use.viewer = FALSE)
+                    ]
+#all PRS working
+affdt_1215_prswork[, sjt.xtab(ADDMON, grpd_region1,
+                              var.labels=c("Save £10?", "Grouped region"), 
+                              #value.labels = c("Can't afford", "Can afford"),
+                              weight.by = hhweight_3, 
+                              show.col.prc = TRUE,
+                              #show.row.prc = TRUE,
+                              use.viewer = FALSE)
+                   ]
 
-#Behind on other loan payments
-des_prs_work <- update(des_prs_work, DEBTFRE3 = factor(DEBTFRE3))
-plot.survey.grpdregion(my_design = subset(des_prs_work, aff_shared_noincben == 0), "DEBTFRE3", 
-                       var_levels = c("DEBTFRE30", "DEBTFRE31", "DEBTFRE32"),
-                       var_labels = c("Not behind", "Behind once", "Behind twice or more"), 
-                       p_title = "Behind with other loans? - can't afford shared ownership, PRS ", region = "grpd_region1")
-
-plot.survey.grpdregion(des_prs_work, "DEBTFRE3", var_levels = c("DEBTFRE30", "DEBTFRE31", "DEBTFRE32"),
-                       var_labels = c("Not behind", "Behind once", "Behind twice or more"), 
-                       p_title = "Behind with other loans? - working PRS ", region = "grpd_region1")
+#Struggling with housing costs
+des_prs_work <-update(des_prs_work, BURDEN = factor(BURDEN)) 
+t_rentburden_prsshare <- as.data.frame( ftable( svyby(formula = ~BURDEN, by = ~grpd_region1, 
+                                                      design = subset(des_prs_work, aff_shared_noincben == 0), 
+                                                      FUN = svymean, na.rm = TRUE))
+)
 
 
-# Can afford £200 expense?
-des_prs_work <- update(des_prs_work, OAEXPNS = factor(OAEXPNS))
-plot.survey.grpdregion(des_prs_work, "OAEXPNS", var_levels = c("OAEXPNS1", "OAEXPNS2"),
-                       var_labels = c("Could meet expense", "Couldn't meet expense"), 
-                       p_title = "Behind with other loans? - working PRS  ", region = "grpd_region1")
+t_rentburden_prsshare <- dcast(t_rentburden_prsshare, grpd_region1 + Var3 ~ Var2)
+t_rentburden_prsshare$Var3 <- factor(t_rentburden_prsshare$Var3, levels = c("BURDEN1", "BURDEN2", "BURDEN3"),
+                                     labels = c("Heavy burden", "Slight burden", 
+                                                "Not a burden"))
 
-#own income and cut back on essentials
-des_prs_work <- update(des_prs_work, OAHOWPY1 = factor(OAHOWPY1))
-plot.survey.grpdregion(my_design = subset(des_prs_work, OAEXPNS == 1), "OAHOWPY1", 
-                       var_levels = c("OAHOWPY11", "OAHOWPY12"),
-                       var_labels = c("Yes", "No"), 
-                       p_title = "Cut back on essentials - working PRS  ", region = "grpd_region1")
+#Plot as points with error bars
+#by region
+ggplot(na.omit(t_rentburden_prsshare), aes(x = svymean, xmin = svymean-SE, xmax = svymean+SE, y = grpd_region1, colour = grpd_region1)) +
+  geom_point() + geom_segment( aes(x = svymean-SE, xend = svymean+SE, y = grpd_region1, yend=grpd_region1)) +
+  xlab("Prop in category") + guides(colour=FALSE) + ylab("Grouped region")+
+  ggtitle("Ability to save £10 for PRS households under 55 who can't afford Shared Ownership") + facet_grid( Var3~ .)
 
-#own income and not cut back
-des_prs_work <- update(des_prs_work, OAHOWPY2 = factor(OAHOWPY2))
-plot.survey.grpdregion(my_design = subset(des_prs_work, OAEXPNS == 1), "OAHOWPY2", 
-                       var_levels = c("OAHOWPY21", "OAHOWPY22"),
-                       var_labels = c("Yes", "No"), 
-                       p_title = "Own income and don't cut back - working PRS  ", region = "grpd_region1")
+#pretty table
+affdt_1215_prswork[ aff_shared_noincben == 0, sjt.xtab(BURDEN, grpd_region1,
+                                                       var.labels=c("Rent a burden?", "Grouped region"), 
+                                                       #value.labels = c("Can't afford", "Can afford"),
+                                                       weight.by = hhweight_3, 
+                                                       show.col.prc = TRUE,
+                                                       #show.row.prc = TRUE,
+                                                       use.viewer = FALSE)
+                    ]
 
-#savings
-des_prs_work <- update(des_prs_work, OAHOWPY3 = factor(OAHOWPY3))
-plot.survey.grpdregion(my_design = subset(des_prs_work, OAEXPNS == 1), "OAHOWPY3", 
-                       var_levels = c("OAHOWPY31", "OAHOWPY32"),
-                       var_labels = c("Yes", "No"), 
-                       p_title = "Savings - working PRS  ", region = "grpd_region1")
+#all PRS under 55
+affdt_1215_1BU[ ( prs_renter & is_HRP& (HDAGE < 5) ), sjt.xtab(BURDEN, grpd_region1,
+                                                               var.labels=c("Rent a burden? All PRS", "Grouped region"), 
+                                                               #value.labels = c("Can't afford", "Can afford"),
+                                                               weight.by = hhweight_3, 
+                                                               show.col.prc = TRUE,
+                                                               #show.row.prc = TRUE,
+                                                               use.viewer = FALSE)
+                ]
 
-#credit (card or loan)
-des_prs_work <- update(des_prs_work, OAHOWPY4 = factor(OAHOWPY4))
-plot.survey.grpdregion(my_design = subset(des_prs_work, OAEXPNS == 1), "OAHOWPY4", 
-                       var_levels = c("OAHOWPY41", "OAHOWPY42"),
-                       var_labels = c("Yes", "No"), 
-                       p_title = "Credit - working PRS  ", region = "grpd_region1")
+#Behind on rent/mortgage, utility bills or other debts
+des_prs_work <-update(des_prs_work, DEBTFRE1 = factor(DEBTFRE1)) 
+des_prs_work <-update(des_prs_work, DEBTFRE2 = factor(DEBTFRE2))
+des_prs_work <-update(des_prs_work, DEBTFRE3 = factor(DEBTFRE3)) 
 
-#family/friends
-des_prs_work <- update(des_prs_work, OAHOWPY5 = factor(OAHOWPY5))
-plot.survey.grpdregion(my_design = subset(des_prs_work, OAEXPNS == 1), "OAHOWPY5", 
-                       var_levels = c("OAHOWPY51", "OAHOWPY52"),
-                       var_labels = c("Yes", "No"), 
-                       p_title = "Friends or family - working PRS  ", region = "grpd_region1")
+t_debt1_prsshare <- as.data.frame( ftable( svyby(formula = ~DEBTFRE1, by = ~grpd_region1, 
+                                                 design = subset(des_prs_work, aff_shared_noincben == 0), 
+                                                 FUN = svymean, na.rm = TRUE))
+)
+t_debt2_prsshare <- as.data.frame( ftable( svyby(formula = ~DEBTFRE2, by = ~grpd_region1, 
+                                                 design = subset(des_prs_work, aff_shared_noincben == 0), 
+                                                 FUN = svymean, na.rm = TRUE))
+)
+t_debt3_prsshare <- as.data.frame( ftable( svyby(formula = ~DEBTFRE3, by = ~grpd_region1, 
+                                                 design = subset(des_prs_work, aff_shared_noincben == 0), 
+                                                 FUN = svymean, na.rm = TRUE))
+)
 
-#other
-des_prs_work <- update(des_prs_work, OAHOWPY6 = factor(OAHOWPY6))
-plot.survey.grpdregion(my_design = subset(des_prs_work, OAEXPNS == 1), "OAHOWPY6", 
-                       var_levels = c("OAHOWPY61", "OAHOWPY62"),
-                       var_labels = c("Yes", "No"), 
-                       p_title = "Other - working PRS  ", region = "grpd_region1")
+
+t_debt1_prsshare <- dcast(t_debt1_prsshare, grpd_region1 + Var3 ~ Var2)
+t_debt2_prsshare <- dcast(t_debt2_prsshare, grpd_region1 + Var3 ~ Var2)
+t_debt3_prsshare <- dcast(t_debt3_prsshare, grpd_region1 + Var3 ~ Var2)
+
+t_debt1_prsshare$Var3 <- factor(t_debt1_prsshare$Var3, levels = c("DEBTFRE10", "DEBTFRE11", "DEBTFRE12"),
+                                labels = c("Not behind", "Behind once", 
+                                           "Behind twice or more"))
+t_debt2_prsshare$Var3 <- factor(t_debt2_prsshare$Var3, levels = c("DEBTFRE20", "DEBTFRE21", "DEBTFRE22"),
+                                labels = c("Not behind", "Behind once", 
+                                           "Behind twice or more"))
+t_debt3_prsshare$Var3 <- factor(t_debt3_prsshare$Var3, levels = c("DEBTFRE30", "DEBTFRE31", "DEBTFRE32"),
+                                labels = c("Not behind", "Behind once", 
+                                           "Behind twice or more"))
+
+#Plot as points with error bars
+#by region
+ggplot(na.omit(t_debt1_prsshare), aes(x = svymean, xmin = svymean-SE, xmax = svymean+SE, y = grpd_region1, colour = grpd_region1)) +
+  geom_point() + geom_segment( aes(x = svymean-SE, xend = svymean+SE, y = grpd_region1, yend=grpd_region1)) +
+  xlab("Prop in category") + guides(colour=FALSE) + ylab("Grouped region")+
+  ggtitle("Times behind with rent for PRS households under 55 who can't afford Shared Ownership") + facet_grid( Var3~ .)
+
+ggplot(na.omit(t_debt2_prsshare), aes(x = svymean, xmin = svymean-SE, xmax = svymean+SE, y = grpd_region1, colour = grpd_region1)) +
+  geom_point() + geom_segment( aes(x = svymean-SE, xend = svymean+SE, y = grpd_region1, yend=grpd_region1)) +
+  xlab("Prop in category") + guides(colour=FALSE) + ylab("Grouped region")+
+  ggtitle("Times behind with utility bills for PRS households under 55 who can't afford Shared Ownership") + facet_grid( Var3~ .)
+
+ggplot(na.omit(t_debt3_prsshare), aes(x = svymean, xmin = svymean-SE, xmax = svymean+SE, y = grpd_region1, colour = grpd_region1)) +
+  geom_point() + geom_segment( aes(x = svymean-SE, xend = svymean+SE, y = grpd_region1, yend=grpd_region1)) +
+  xlab("Prop in category") + guides(colour=FALSE) + ylab("Grouped region")+
+  ggtitle("Times behind with other bills for PRS households under 55 who can't afford Shared Ownership") + facet_grid( Var3~ .)
+
+#table
+svymean(~DEBTFRE1, design = subset(des_prs_work, aff_shared_noincben == 0), na.rm = TRUE, ci = TRUE)
+#all PRS under 55
+svymean(~DEBTFRE1, design = des_prs_work, na.rm = TRUE, ci = TRUE)
+
+#pretty table
+affdt_1215_prswork[ aff_shared_noincben == 0, sjt.xtab(OAEXPNS, grpd_region1,
+                                                       var.labels=c("£200 expense?", "Grouped region"), 
+                                                       #value.labels = c("Can't afford", "Can afford"),
+                                                       weight.by = hhweight_3, 
+                                                       show.col.prc = TRUE,
+                                                       #show.row.prc = TRUE,
+                                                       use.viewer = FALSE)
+                    ]
+
+
+
+
 
 #### Finances of those who *can* afford shared ownership ####
 #average savings
-svyquantile(~bu_savings, design = subset(des_prs_work, aff_shared_noincben ==1), quantile = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9), ci = TRUE)
-svymean(~bu_savings, design = subset(des_prs_work, aff_shared_noincben ==1), ci = TRUE)
-
-t_savings_prsaff <- as.data.frame(svyby(~bu_savings, by = ~grpd_region1, design = subset(des_prs_work, aff_shared_noincben == 1), 
-                                            FUN = svyquantile, 
-                                            quantiles = c(0.1, 0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9), ci = TRUE, na.rm = TRUE))
+svyquantile(~TOTCAPB3, design = subset(des_prs_work, aff_shared_noincben ==1), quantile = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9), ci = TRUE)
+svymean(~TOTCAPB3, design = subset(des_prs_work, aff_shared_noincben ==1), ci = TRUE)
 
 #% no savings can afford
-affdt_1215_prswork[ aff_shared_noincben == 1, sjt.xtab(bu_savings <=0, grpd_region1,
+affdt_1215_prswork[ aff_shared_noincben == 1, sjt.xtab(TOTCAPB3 <=0, grpd_region1,
                                                        var.labels=c("No savings? Can afford", "Grouped region"), 
                                                        #value.labels = c("Can't afford", "Can afford"),
                                                        weight.by = hhweight_3, 
@@ -917,26 +985,13 @@ affdt_1215_prswork[ aff_shared_noincben == 1, sjt.xtab(bu_savings <=0, grpd_regi
                                                        use.viewer = FALSE)
                     ]
 
-t_nosavings_prsaff <- as.data.frame(svyby(~(bu_savings==0), by = ~grpd_region1, design = subset(des_prs_work, aff_shared_noincben == 1), 
-                                           FUN = svymean, na.rm = TRUE))
-
-svymean(~(bu_savings==0), design = subset(des_prs_work, aff_shared_noincben == 1), ci = TRUE, na.rm=TRUE)
-
-t_depodist_prsaff <- as.data.frame(svyby(~hh_grossinc, by = ~grpd_region2, design = deshhd1315_prs, 
-                                       FUN = svyquantile, 
-                                       quantiles = c(0.1, 0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9), ci = TRUE, na.rm = TRUE))
-
-
-
 #average difference between savings and deposit
 svyquantile(~diff_shareddep, design = subset(des_prs_work, aff_shared_noincben ==1), quantile = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9), ci = TRUE)
-t_depositdiff_prsaff <- as.data.frame(ftable( svyby(formula = ~diff_shareddep, by = ~grpd_region1, 
-                                                    design = subset(des_prs_work, aff_shared_noincben == 1), 
-                                                    FUN = svyquantile, quantiles = 0.5, ci = TRUE)))
+ftable( svyby(formula = ~diff_shareddep, by = ~grpd_region1, 
+              design = subset(des_prs_work, aff_shared_noincben == 1), 
+              FUN = svyquantile, quantiles = 0.5, ci = TRUE))
 
-t_depositdiff_prsaff <- as.data.frame(svyby(~diff_shareddep, by = ~grpd_region1, design = subset(des_prs_work, aff_shared_noincben == 1), 
-                                         FUN = svyquantile, 
-                                         quantiles = c(0.1, 0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9), ci = TRUE, na.rm = TRUE))
+
 #Ability to save at least £10 a month
 t_save10_prssharecan <- as.data.frame( ftable( svyby(formula = ~ADDMON, by = ~grpd_region1, 
                                                      design = subset(des_prs_work, aff_shared_noincben == 1), 
@@ -1088,33 +1143,11 @@ affdt_1215_prswork[ aff_shared_noincben == 1, sjt.xtab(DEBTFRE3, grpd_region1,
 affdt_1215_prswork[ , sjt.xtab(affanddep_shared, GVTREGN,
                                var.labels=c("Can afford and can deposit shared? All PRS 55", "Grouped region"),
                                #value.labels = c("Can't afford", "Can afford"),
-                               weight.by = hhweight, 
+                               weight.by = hhweight_3, 
                                show.col.prc = TRUE,
                                #show.row.prc = TRUE,
                                use.viewer = FALSE)
                     ]
-
-
-des_prs_work <- update(des_prs_work, affanddep_shared = factor(affanddep_shared))
-t_sharedaff_prswork <- plot.survey.grpdregion(des_prs_work, "affanddep_shared", 
-                                              var_levels = c("affanddep_sharedCan't afford", 
-                                                             "affanddep_sharedCan afford but can't save deposit", 
-                                                             "affanddep_sharedCan afford and can save or has deposit"),
-                                              var_labels = c("Can't afford", "Can afford but can't save deposit", 
-                                                             "Can afford and can save or has deposit"), 
-                                              p_title = "Can afford shared ownership? - all working PRS ")
-
-hb <- ggplot(na.omit(t_sharedaff_prswork), aes(x = region, y = svy_fun, fill = Var3)) +
-  #geom_freqpoly( aes(group = factor(aff_shared_noincben)))+
-  geom_bar(stat="identity") + 
-  coord_flip() +
-  scale_fill_manual(values=c("firebrick3", "grey19", "cyan4", "darkorange1"))+
-  guides(fill=guide_legend(title=NULL)) +
-  #theme(axis.title.y = element_blank()) +
-  theme( legend.position = "top", panel.background = element_rect(fill = "white") ) +
-  ylab("Proportion of working PRS") + ggtitle("Could working PRS households afford \n a typical shared ownership property?")
-
-print(hb)
      
 # ######Affordability of shared ownership, private renters who are eligible for Starter Homes
 # des_prsel <- subset(deshhd_1215, (prs_renter == 1 & eligible_starter ==1))
